@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  name      String
+  role      String     @default("ADMIN") // "ADMIN", "FAMILY"
+  memorials Memorial[] @relation("MemorialCreator")
+  createdAt DateTime   @default(now())
+}
+
+model Memorial {
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  name          String
+  birthDate     String
+  deathDate     String
+  biography     String
+  mainImage     String?
+  coverImage    String?
+  isPrivate     Boolean        @default(false)
+  password      String?
+  qrCodeUrl     String?
+  creatorId     String
+  creator       User           @relation("MemorialCreator", fields: [creatorId], references: [id])
+  memories      Memory[]
+  condolences   Condolence[]
+  collaborators Collaborator[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Memory {
+  id             String   @id @default(uuid())
+  type           String   // "PHOTO", "VIDEO", "STORY", "AUDIO"
+  title          String
+  content        String?
+  fileUrl        String?
+  authorName     String
+  authorRelation String
+  memorialId     String
+  memorial       Memorial @relation(fields: [memorialId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+}
+
+model Condolence {
+  id          String   @id @default(uuid())
+  authorName  String
+  message     String
+  memorialId  String
+  memorial    Memorial @relation(fields: [memorialId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model Collaborator {
+  id           String   @id @default(uuid())
+  email        String
+  relation     String
+  role         String   @default("CONTRIBUTOR") // "ADMIN", "CONTRIBUTOR"
+  memorialId   String
+  memorial     Memorial @relation(fields: [memorialId], references: [id], onDelete: Cascade)
+  inviteStatus String   @default("PENDING") // "PENDING", "ACCEPTED"
+  createdAt    DateTime @default(now())
+}

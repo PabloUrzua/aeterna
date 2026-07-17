@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    /* === PALETA EXACTA DEL USUARIO === */
+    --color-primary: #1E3A8A;       /* Azul Profundo */
+    --color-secondary: #3B82F6;     /* Azul Brillante */
+    --color-accent: #14B8A6;        /* Turquesa Suave */
+    --color-bg: #F8FAFC;            /* Fondo */
+    --color-text: #1F2937;          /* Texto principal */
+    --color-btn-main: #2563EB;      /* Botones principales */
+    --color-btn-sec: #14B8A6;       /* Botones secundarios */
+    --color-white: #FFFFFF;         /* Blanco */
+
+    /* Derivados para hover y contraste */
+    --color-primary-hover: #1D4ED8;
+    --color-btn-main-hover: #1D4ED8;
+    --color-btn-sec-hover: #0D9488;
+    --color-primary-rgb: 30, 58, 138;
+
+    /* Variables de sistema (Tenant / White Label) */
+    --tenant-primary: var(--color-primary);
+    --tenant-primary-hover: var(--color-primary-hover);
+    --tenant-primary-fg: var(--color-white);
+    --tenant-btn-main: var(--color-btn-main);
+    --tenant-btn-sec: var(--color-btn-sec);
+    --tenant-bg: var(--color-bg);
+    --tenant-fg: var(--color-text);
+    --tenant-primary-rgb: var(--color-primary-rgb);
+
+    /* Variables legacy para compatibilidad */
+    --background: var(--tenant-bg);
+    --foreground: var(--tenant-fg);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+}
+
+@theme inline {
+  /* Colores de la paleta del usuario */
+  --color-brand-primary: var(--color-primary);
+  --color-brand-secondary: var(--color-secondary);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-bg: var(--color-bg);
+  --color-brand-text: var(--color-text);
+  --color-brand-btn-main: var(--color-btn-main);
+  --color-brand-btn-sec: var(--color-btn-sec);
+
+  /* Variables de tenant para marca blanca */
+  --color-tenant-primary: var(--tenant-primary);
+  --color-tenant-primary-hover: var(--tenant-primary-hover);
+  --color-tenant-primary-fg: var(--tenant-primary-fg);
+  --color-tenant-btn-main: var(--tenant-btn-main);
+  --color-tenant-btn-sec: var(--tenant-btn-sec);
+  --color-tenant-bg: var(--tenant-bg);
+  --color-tenant-fg: var(--tenant-fg);
+
+  --font-serif: var(--font-playfair), Georgia, ui-serif, serif;
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Glass Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px -8px rgba(var(--color-primary-rgb), 0.08),
+              0 1px 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Gradiente de marca */
+.brand-gradient {
+  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #14B8A6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.smooth-transition {
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Candle flame animation */
+@keyframes flameWobble {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+  20% { transform: scale(0.9, 1.1) rotate(-2deg); opacity: 0.8; }
+  50% { transform: scale(1.1, 0.9) rotate(3deg); opacity: 1; }
+  80% { transform: scale(1, 1.05) rotate(-1deg); opacity: 0.85; }
+}
+
+.candle-flame {
+  animation: flameWobble 2.5s infinite ease-in-out;
+  transform-origin: bottom center;
+}
+
+.candle-glow {
+  box-shadow: 0 0 20px 4px rgba(var(--color-primary-rgb), 0.4);
+}
+
+@keyframes floatSmoke {
+  0% { transform: translateY(0) scale(1); opacity: 0.5; }
+  100% { transform: translateY(-40px) scale(1.5); opacity: 0; }
+}
+
+.smoke-effect {
+  animation: floatSmoke 2s forwards ease-out;
+}
+
+@keyframes floatFlower {
+  0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0.8; }
+  50% { transform: translateY(-40px) rotate(90deg) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-90px) rotate(180deg) scale(0.9); opacity: 0; }
+}
+
+.flower-effect {
+  animation: floatFlower 2.5s forwards cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }

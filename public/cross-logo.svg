@@ -1,0 +1,13 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo opcional (comentar si no lo necesitas) -->
+  <!-- <rect width="200" height="200" fill="#f5f1e8" rx="20"/> -->
+  
+  <!-- Cruz vertical -->
+  <rect x="85" y="20" width="30" height="160" fill="#8b7355" rx="4"/>
+  
+  <!-- Cruz horizontal -->
+  <rect x="20" y="85" width="160" height="30" fill="#8b7355" rx="4"/>
+  
+  <!-- Detalles decorativos en los extremos -->
+  <circle cx="100" cy="100" r="25" fill="none" stroke="#8b7355" stroke-width="2"/>
+</svg>
