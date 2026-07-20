@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           isPrivate: !!isPrivate,
           password: password || null,
           creatorId: defaultCreatorId,
-          qrCodeUrl: `http://localhost:3000/memorial/${cleanSlug}`
+          qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://aeterna.app"}/memorial/${cleanSlug}`
         }
       });
 
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         coverImage: coverImage || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
         isPrivate: !!isPrivate,
         password: password || null,
-        qrCodeUrl: `http://localhost:3000/memorial/${cleanSlug}`,
+        qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://aeterna.app"}/memorial/${cleanSlug}`,
         creatorId: creatorId || "system-admin",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

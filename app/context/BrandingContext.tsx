@@ -21,7 +21,7 @@ export interface TenantConfig {
 }
 
 const defaultTenant: TenantConfig = {
-  name: "Aeterna",
+  name: "Mi Funeraria",
   logoType: "icon",
   logoText: "Aeterna Legacy",
   primaryColor: "#1E3A8A",

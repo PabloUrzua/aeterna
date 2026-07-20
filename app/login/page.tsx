@@ -24,6 +24,14 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     try {
+      // Hardcoded Admin Bypass
+      if (email === "cjxd123@gmail.com" && password === "123") {
+        localStorage.setItem("user_session", JSON.stringify({ email: "cjxd123@gmail.com", role: "ADMIN" }));
+        confetti({ particleCount: 30, spread: 40, colors: ["#1F2937", "#9CA3AF"] });
+        router.push("/dashboard");
+        return;
+      }
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
@@ -46,8 +54,9 @@ export default function LoginPage() {
         if (error) {
           setErrorMsg("Credenciales inválidas o correo no registrado.");
         } else if (data.user) {
-          // Guardar role básico si lo necesitas, o el token
-          localStorage.setItem("user_session", JSON.stringify({ email: data.user.email, role: "ADMIN" }));
+          // Asignar rol dependiendo del correo
+          const userRole = data.user.email === "cjxd123@gmail.com" ? "ADMIN" : "FUNERARIA";
+          localStorage.setItem("user_session", JSON.stringify({ email: data.user.email, role: userRole }));
           
           confetti({ particleCount: 30, spread: 40, colors: ["#1F2937", "#9CA3AF"] });
           router.push("/dashboard");
@@ -68,107 +77,108 @@ export default function LoginPage() {
         <img 
           src="https://picsum.photos/id/93/2000/1200" 
           alt="Paisaje de fondo" 
-          className="w-full h-full object-cover opacity-15 mix-blend-multiply"
+          className="w-full h-full object-cover opacity-20 mix-blend-multiply"
         />
-        <div className="absolute inset-0 bg-[#FCFBFA]/85"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FCFBFA]/80 to-[#FCFBFA]/95"></div>
       </div>
       <Link
         href="/"
-        className="absolute top-6 left-6 text-sm uppercase tracking-widest font-bold text-[#967B62] hover:text-neutral-900 dark:hover:text-white flex items-center gap-1.5 transition-colors"
+        className="absolute top-8 left-8 text-xs uppercase tracking-widest font-bold text-[#967B62] hover:text-[#7D654E] flex items-center gap-2 transition-all duration-300 hover:-translate-x-1"
       >
-        <ArrowLeft size={12} /> Volver a Inicio
+        <ArrowLeft size={14} /> Volver a Inicio
       </Link>
 
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm border border-stone-200/60 p-8 rounded-2xl shadow-sm space-y-6">
-        <div className="space-y-1.5 text-center">
-          <Link href="/" className="inline-flex items-center justify-center gap-2 group mb-1">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-stone-200/50 p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-8 relative z-10 transition-all duration-500 hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)]">
+        <div className="space-y-3 text-center">
+          <Link href="/" className="inline-flex items-center justify-center gap-3 group mb-2">
             <svg 
               viewBox="0 0 24 24" 
               fill="none" 
               xmlns="http://www.w3.org/2000/svg"
-              className="w-5 h-5 md:w-6 md:h-6 text-[#967B62] group-hover:scale-110 transition-transform duration-500 ease-in-out"
+              className="w-6 h-6 md:w-7 md:h-7 text-[#967B62] group-hover:scale-110 transition-transform duration-500 ease-out"
             >
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="font-serif text-sm tracking-[0.2em] font-bold uppercase text-[#111111]">
+            <span className="font-serif text-lg tracking-[0.25em] font-bold uppercase text-[#111111]">
               AETERNA
             </span>
           </Link>
-          <h2 className="font-serif text-lg font-normal text-[#111111]">
+          <h2 className="font-serif text-2xl font-normal text-[#111111]">
             Acceso a tu Cuenta
           </h2>
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">
+          <p className="text-xs text-neutral-400 uppercase tracking-[0.15em] font-medium">
             Consola del Memorial
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="p-4 bg-red-50/80 border border-red-100 text-red-600 rounded-xl text-sm flex items-start gap-3 transition-all">
+              <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-500" />
+              <span className="font-medium leading-relaxed">{errorMsg}</span>
             </div>
           )}
           {successMsg && (
-            <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+            <div className="p-4 bg-green-50/80 border border-green-100 text-green-700 rounded-xl text-sm font-medium transition-all">
               {successMsg}
             </div>
           )}
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-widest text-neutral-500 font-bold block mb-1">
+          
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.15em] text-neutral-500 font-bold block ml-1">
               Correo Electrónico
             </label>
-            <div className="relative">
+            <div className="relative group">
               <input
                 type="email"
                 required
                 placeholder="nombre@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/60 border border-stone-200/80 rounded-lg pl-8.5 pr-4 py-2 outline-none text-sm text-[#111111] focus:border-[#967B62] transition-colors"
+                className="w-full bg-stone-50/50 border border-stone-200 rounded-xl pl-11 pr-4 py-3.5 outline-none text-sm text-[#111111] focus:bg-white focus:border-[#967B62] focus:ring-4 focus:ring-[#967B62]/10 transition-all duration-300 placeholder:text-neutral-400"
               />
-              <Mail size={12} className="absolute left-3 top-3 text-[#967B62]" />
+              <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-[#967B62] transition-colors duration-300" />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs uppercase tracking-widest text-neutral-500 font-bold block mb-1">
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.15em] text-neutral-500 font-bold block ml-1">
               Contraseña
             </label>
-            <div className="relative">
+            <div className="relative group">
               <input
                 type="password"
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/60 border border-stone-200/80 rounded-lg pl-8.5 pr-4 py-2 outline-none text-sm text-[#111111] focus:border-[#967B62] transition-colors"
+                className="w-full bg-stone-50/50 border border-stone-200 rounded-xl pl-11 pr-4 py-3.5 outline-none text-sm text-[#111111] focus:bg-white focus:border-[#967B62] focus:ring-4 focus:ring-[#967B62]/10 transition-all duration-300 placeholder:text-neutral-400"
               />
-              <Key size={12} className="absolute left-3 top-3 text-[#967B62]" />
+              <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-[#967B62] transition-colors duration-300" />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 rounded-lg bg-[#967B62] text-white hover:bg-[#7D654E] text-sm uppercase tracking-widest font-bold transition-colors shadow-xs"
+            className="w-full py-3.5 mt-2 rounded-xl bg-[#967B62] text-white hover:bg-[#856b54] active:scale-[0.98] text-xs uppercase tracking-[0.2em] font-bold transition-all duration-300 shadow-lg shadow-[#967B62]/20 hover:shadow-[#967B62]/40 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Cargando..." : isSignUp ? "Crear Cuenta" : "Ingresar a la Consola"}
+            {isLoading ? "Cargando..." : isSignUp ? "Crear Cuenta" : "Ingresar"}
           </button>
         </form>
 
-        <div className="text-center text-sm text-neutral-500 font-light border-t border-stone-100 pt-4">
+        <div className="text-center text-xs text-neutral-500 font-medium border-t border-stone-100 pt-6">
           {isSignUp ? (
             <p>
               ¿Ya tienes una cuenta?{" "}
-              <button type="button" onClick={() => setIsSignUp(false)} className="text-[#967B62] font-semibold hover:underline">
+              <button type="button" onClick={() => setIsSignUp(false)} className="text-[#967B62] font-bold hover:text-[#856b54] transition-colors">
                 Inicia sesión aquí
               </button>
             </p>
           ) : (
             <p>
               ¿No tienes una cuenta?{" "}
-              <button type="button" onClick={() => setIsSignUp(true)} className="text-[#967B62] font-semibold hover:underline">
+              <button type="button" onClick={() => setIsSignUp(true)} className="text-[#967B62] font-bold hover:text-[#856b54] transition-colors">
                 Regístrate aquí
               </button>
             </p>

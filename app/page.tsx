@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, ArrowRight, ShieldCheck, Sparkles, Eye, Leaf, QrCode } from "lucide-react";
+import { Heart, ArrowRight, ShieldCheck, Sparkles, Eye, Leaf, QrCode, LogIn, Plus } from "lucide-react";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -46,15 +46,15 @@ export default function LandingPage() {
           <div className="flex items-center gap-2 sm:gap-4 md:gap-6 shrink-0">
             <Link
               href="/login"
-              className="text-[10px] sm:text-xs md:text-sm uppercase tracking-widest font-bold text-[#55504C] hover:text-[#967B62] transition-colors whitespace-nowrap"
+              className="text-[10px] sm:text-xs md:text-sm uppercase tracking-widest font-bold text-[#55504C] hover:text-[#967B62] transition-colors whitespace-nowrap flex items-center gap-1.5"
             >
-              Ingresar
+              <LogIn size={16} /> Ingresar
             </Link>
             <Link
-              href="/dashboard"
-              className="px-2 py-1.5 sm:px-3 sm:py-2 md:px-5 md:py-2.5 rounded-sm bg-[#967B62]/10 border border-[#967B62] hover:bg-[#967B62] hover:text-[#FCFBFA] text-[#967B62] text-[10px] sm:text-xs md:text-sm uppercase tracking-widest font-bold transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+              href="/login"
+              className="px-2 py-1.5 sm:px-3 sm:py-2 md:px-5 md:py-2.5 rounded-sm bg-[#967B62]/10 border border-[#967B62] hover:bg-[#967B62] hover:text-[#FCFBFA] text-[#967B62] text-[10px] sm:text-xs md:text-sm uppercase tracking-widest font-bold transition-all shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-1.5"
             >
-              Crear Memorial
+              <Plus size={16} /> Crear Memorial
             </Link>
           </div>
         </div>
@@ -85,7 +85,7 @@ export default function LandingPage() {
             </button>
             
             <Link
-              href="/dashboard"
+              href="/login"
               className="w-full sm:w-auto px-8 py-3.5 rounded-md bg-transparent hover:bg-[#967B62]/10 border border-[#967B62] text-[#967B62] text-base font-semibold tracking-wider transition-all flex items-center justify-center gap-2 hover:-translate-y-1"
             >
               Empezar a Crear <ArrowRight size={16} />

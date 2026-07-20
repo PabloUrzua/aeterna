@@ -743,7 +743,7 @@ export default function MemorialPage() {
               Cerrar
             </button>
             <QrCodeGenerator
-              url={`http://localhost:3000/memorial/${memorial.slug}`}
+              url={`${typeof window !== "undefined" ? window.location.origin : ""}/memorial/${memorial.slug}`}
               name={memorial.name}
             />
           </div>
