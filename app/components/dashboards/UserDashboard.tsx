@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import QrCodeGenerator from "../../../components/QrCodeGenerator";
 import confetti from "canvas-confetti";
+import { useBranding } from "../../context/BrandingContext";
 
 interface Memorial {
   id: string;
@@ -42,6 +43,7 @@ interface Memorial {
 
 export default function UserDashboard({ switchRole, originalRole }: { switchRole?: (role: string) => void, originalRole?: string | null } = {}) {
   const router = useRouter();
+  const { config } = useBranding();
   const [session, setSession] = useState<{ email: string; role: string } | null>(null);
 
   // Memorials List
@@ -360,7 +362,7 @@ export default function UserDashboard({ switchRole, originalRole }: { switchRole
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="font-serif text-base tracking-[0.2em] font-semibold uppercase text-[#111111]">
-              AETERNA
+              {config.name ? config.name.toUpperCase() : "AETERNA"}
             </span>
           </Link>
           <span className="w-[1px] h-3 bg-stone-200 " />

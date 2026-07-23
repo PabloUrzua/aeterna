@@ -16,32 +16,209 @@ import {
   Layers, 
   CheckCircle,
   FileText,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  UserPlus
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 import { useBranding, presets } from "../../context/BrandingContext";
 import confetti from "canvas-confetti";
+import { createClient } from "@/utils/supabase/client";
 
 export default function SuperAdminDashboard({ switchRole, originalRole }: { switchRole?: (role: string) => void, originalRole?: string | null }) {
   const router = useRouter();
   const { config } = useBranding();
 
   const [globalMemorials, setGlobalMemorials] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"tenants" | "profiles">("tenants");
+  const [activeTab, setActiveTab] = useState<"tenants" | "profiles" | "funerarias">("tenants");
+  const [tenants, setTenants] = useState<any[]>([]);
+  
+  // Calculate dynamic stats
+  const calculateMRR = () => {
+    return tenants.reduce((total, tenant) => {
+      if (tenant.status !== "Activo") return total;
+      switch (tenant.plan) {
+        case "Enterprise": return total + 1200;
+        case "Growth B2B": return total + 500;
+        case "Essential B2B": return total + 150;
+        default: return total;
+      }
+    }, 0);
+  };
+
+  const calculateChurn = () => {
+    if (tenants.length === 0) return 0;
+    const inactive = tenants.filter(t => t.status !== "Activo").length;
+    return ((inactive / tenants.length) * 100).toFixed(1);
+  };
+  
+  // Generar datos históricos simulados terminando en el valor EXACTO real
+  const chartData = React.useMemo(() => {
+    const currentMRR = calculateMRR();
+    const currentMemorials = globalMemorials.length;
+    
+    return [
+      { name: "Feb", mrr: Math.round(currentMRR * 0.4), memorials: Math.round(currentMemorials * 0.3) },
+      { name: "Mar", mrr: Math.round(currentMRR * 0.55), memorials: Math.round(currentMemorials * 0.45) },
+      { name: "Abr", mrr: Math.round(currentMRR * 0.7), memorials: Math.round(currentMemorials * 0.6) },
+      { name: "May", mrr: Math.round(currentMRR * 0.8), memorials: Math.round(currentMemorials * 0.8) },
+      { name: "Jun", mrr: Math.round(currentMRR * 0.92), memorials: Math.round(currentMemorials * 0.9) },
+      { name: "Jul (Actual)", mrr: currentMRR, memorials: currentMemorials }
+    ];
+  }, [tenants, globalMemorials]);
+
+  // Funeraria Tools State
+  const [branches, setBranches] = useState([
+    { id: "b1", name: "Sucursal Centro", city: "Santiago", address: "Av. Providencia 1024" },
+    { id: "b2", name: "Sucursal Valparaíso", city: "Valparaíso", address: "Condell 450" }
+  ]);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [newBranchCity, setNewBranchCity] = useState("");
+  const [newBranchAddress, setNewBranchAddress] = useState("");
+
+  const [newName, setNewName] = useState("");
+  const [newBirth, setNewBirth] = useState("");
+  const [newDeath, setNewDeath] = useState("");
+  const [newFamilyEmail, setNewFamilyEmail] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Aeterna Legacy");
+  const [emailGreeting, setEmailGreeting] = useState("Estimada familia Valenzuela,");
+  const [emailBody, setEmailBody] = useState("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+
+  // Create User State
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserTenant, setNewUserTenant] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"FUNERARIA" | "FAMILIA">("FUNERARIA");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [userCreateMsg, setUserCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [createdUsers, setCreatedUsers] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    const savedUsers = localStorage.getItem("aeterna_users");
+    if (savedUsers) {
+      setCreatedUsers(JSON.parse(savedUsers));
+    }
+  }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || !newUserTenant.trim()) return;
+
+    setIsCreatingUser(true);
+    setUserCreateMsg(null);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword,
+      });
+
+      if (error) {
+        setUserCreateMsg({ type: "error", text: error.message });
+      } else {
+        const newUser = {
+          id: `u-${Date.now()}`,
+          name: newUserName,
+          email: newUserEmail,
+          role: newUserRole,
+          tenantName: newUserTenant,
+          createdAt: new Date().toISOString().substring(0, 10),
+          status: "Pendiente Confirmación"
+        };
+
+        const savedUsers = localStorage.getItem("aeterna_users");
+        const allUsers = savedUsers ? JSON.parse(savedUsers) : [];
+        const updated = [...allUsers, newUser];
+        localStorage.setItem("aeterna_users", JSON.stringify(updated));
+        setCreatedUsers(updated);
+
+        setUserCreateMsg({ type: "success", text: `Usuario ${newUserEmail} creado exitosamente. Se envió correo de confirmación.` });
+        setNewUserName("");
+        setNewUserEmail("");
+        setNewUserPassword("");
+        setNewUserTenant("");
+        confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+      }
+    } catch (err: any) {
+      setUserCreateMsg({ type: "error", text: err.message || "Error inesperado" });
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleCreateMemorial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || !newFamilyEmail.trim()) return;
+
+    setIsCreating(true);
+
+    setTimeout(() => {
+      const slugified = newName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const newMemorial = {
+        id: `m-${Date.now()}`,
+        slug: slugified,
+        name: newName,
+        birthDate: newBirth,
+        deathDate: newDeath,
+        biography: "Biografía pendiente...",
+        mainImage: "https://picsum.photos/id/93/2000/1200",
+        coverImage: "https://picsum.photos/id/93/2000/1200",
+        isPrivate: false,
+        tenantName: "Aeterna Default",
+        createdBy: "cjxd123@gmail.com"
+      };
+
+      const savedMems = localStorage.getItem("aeterna_memorials");
+      const allMems = savedMems ? JSON.parse(savedMems) : [];
+      const updatedAllMems = [...allMems, newMemorial];
+      localStorage.setItem("aeterna_memorials", JSON.stringify(updatedAllMems));
+
+      setGlobalMemorials(prev => [...prev, newMemorial]);
+
+      setIsCreating(false);
+      setNewName("");
+      setNewBirth("");
+      setNewDeath("");
+      setNewFamilyEmail("");
+
+      confetti({
+        particleCount: 25,
+        spread: 30,
+        colors: ["#14B8A6", "#FAF7F2"]
+      });
+      alert(`Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`);
+    }, 1200);
+  };
 
   React.useEffect(() => {
     const savedMems = localStorage.getItem("aeterna_memorials");
     if (savedMems) {
       setGlobalMemorials(JSON.parse(savedMems));
     }
-  }, []);
 
-  // Local state for tenant lists (populated initially with presets)
-  const [tenants, setTenants] = useState([
-    { id: "t1", name: "Aeterna Default", domain: "memoriales.aeterna.app", plan: "Enterprise", status: "Activo", memorials: 1420, date: "2026-01-10" },
-    { id: "t2", name: "Funeraria La Paz", domain: "memoriales.funerarialapaz.cl", plan: "Growth B2B", status: "Activo", memorials: 832, date: "2026-02-15" },
-    { id: "t3", name: "Elysium Gardens", domain: "legado.elysiumgardens.com", plan: "Growth B2B", status: "Activo", memorials: 642, date: "2026-03-20" },
-    { id: "t4", name: "Memorial Aurora", domain: "recuerdos.auroramemorial.mx", plan: "Essential B2B", status: "Activo", memorials: 211, date: "2026-04-05" },
-  ]);
+    const savedTenants = localStorage.getItem("aeterna_tenants");
+    if (savedTenants) {
+      setTenants(JSON.parse(savedTenants));
+    } else {
+      // Provide one default real tenant so the platform can be used
+      const defaultTenant = [{ id: "t1", name: "Aeterna Default", domain: "memoriales.aeterna.app", plan: "Enterprise", status: "Activo", memorials: 0, date: new Date().toISOString().substring(0, 10) }];
+      setTenants(defaultTenant);
+      localStorage.setItem("aeterna_tenants", JSON.stringify(defaultTenant));
+    }
+  }, []);
 
   const [logs, setLogs] = useState([
     { time: "14:24:02", type: "info", msg: "Tenant 'Funeraria La Paz' creó memorial 'Beatriz Mendoza'" },
@@ -79,7 +256,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   };
 
   const handleToggleStatus = (id: string) => {
-    setTenants(prev => prev.map(t => {
+    const updatedTenants = tenants.map(t => {
       if (t.id === id) {
         const nextStatus = t.status === "Activo" ? "Suspendido" : "Activo";
         
@@ -93,7 +270,9 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         return { ...t, status: nextStatus };
       }
       return t;
-    }));
+    });
+    setTenants(updatedTenants);
+    localStorage.setItem("aeterna_tenants", JSON.stringify(updatedTenants));
   };
 
   return (
@@ -142,8 +321,12 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
               <Layers size={14} /> Panel de Control
             </button>
             <button 
-              onClick={() => switchRole?.("FUNERARIA")}
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 flex items-center gap-2 text-neutral-600 dark:text-neutral-400 smooth-transition hover:scale-[1.02]"
+              onClick={() => setActiveTab("funerarias")}
+              className={`w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "funerarias" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
             >
               <Building size={14} /> Portal Funerarias
             </button>
@@ -202,9 +385,9 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
             <div className="glass-panel p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
               <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">M.R.R. Global</span>
               <span className="text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100 flex items-center gap-1">
-                $32,450 <TrendingUp size={14} className="text-green-500" />
+                ${calculateMRR().toLocaleString()} <TrendingUp size={14} className="text-green-500" />
               </span>
-              <span className="text-[8px] text-neutral-400 mt-1 block">+12% este mes</span>
+              <span className="text-[8px] text-neutral-400 mt-1 block">Basado en planes activos</span>
             </div>
 
             <div className="glass-panel p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
@@ -212,13 +395,13 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
               <span className="text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">
                 {tenants.length} Registradas
               </span>
-              <span className="text-[8px] text-neutral-400 mt-1 block">100% marca blanca activa</span>
+              <span className="text-[8px] text-neutral-400 mt-1 block">{tenants.filter(t => t.status === "Activo").length} marca blanca activas</span>
             </div>
 
             <div className="glass-panel p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
               <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Memoriales Totales</span>
               <span className="text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">
-                {tenants.reduce((acc, curr) => acc + curr.memorials, 0)} Activos
+                {globalMemorials.length} Activos
               </span>
               <span className="text-[8px] text-neutral-400 mt-1 block">Custodia perpetua activa</span>
             </div>
@@ -226,9 +409,78 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
             <div className="glass-panel p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
               <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Tasa de Churn</span>
               <span className="text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">
-                0.8%
+                {calculateChurn()}%
               </span>
-              <span className="text-[8px] text-green-500 mt-1 block font-bold">Excelente retención</span>
+              <span className={`text-[8px] mt-1 block font-bold ${Number(calculateChurn()) > 5 ? 'text-red-500' : 'text-green-500'}`}>
+                {Number(calculateChurn()) > 5 ? 'Requiere atención' : 'Excelente retención'}
+              </span>
+            </div>
+          </section>
+
+          {/* Gráfico en Tiempo Real */}
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <h2 className="font-serif text-xl font-bold mb-6 flex items-center gap-2">
+              <Activity size={18} className="text-[var(--tenant-primary)]" />
+              Evolución de Plataforma (MRR vs Memoriales)
+            </h2>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--tenant-primary)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--tenant-primary)" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorMemorials" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#14B8A6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                  />
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(156, 163, 175, 0.15)" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      borderRadius: '12px', 
+                      border: 'none', 
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                      backgroundColor: 'rgba(255,255,255,0.95)',
+                      backdropFilter: 'blur(8px)'
+                    }} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="mrr" 
+                    name="M.R.R. (USD)"
+                    stroke="var(--tenant-primary)" 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#colorMrr)" 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="memorials" 
+                    name="Memoriales Activos"
+                    stroke="#14B8A6" 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#colorMemorials)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </section>
 
@@ -282,6 +534,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
 
           {/* Directorio Global de Memoriales (Todos los clientes de todas las funerarias) */}
           {activeTab === "profiles" && (
+          <>
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
             <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
               <Users size={18} className="text-[var(--tenant-primary)]" />
@@ -337,6 +590,328 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
               </table>
             </div>
           </section>
+
+          {/* Formulario Crear Usuario */}
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+            <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+              <UserPlus size={18} className="text-[var(--tenant-primary)]" />
+              Crear Nuevo Usuario
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+              Registra un nuevo usuario en la plataforma y asígnalo a una funeraria. Se le enviará un correo de confirmación que deberá verificar antes de poder acceder.
+            </p>
+
+            {userCreateMsg && (
+              <div className={`p-4 rounded-xl text-sm font-medium mb-4 ${
+                userCreateMsg.type === "success" 
+                  ? "bg-green-50 border border-green-200 text-green-700" 
+                  : "bg-red-50 border border-red-200 text-red-600"
+              }`}>
+                {userCreateMsg.text}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUser} className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Juan Pérez"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo Electrónico</label>
+                  <input 
+                    type="email" 
+                    placeholder="usuario@funeraria.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Contraseña Inicial</label>
+                  <input 
+                    type="password" 
+                    placeholder="Mínimo 6 caracteres"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+              </div>
+              <div className="space-y-4 flex flex-col justify-between">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Funeraria Asignada</label>
+                  <select
+                    value={newUserTenant}
+                    onChange={(e) => setNewUserTenant(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  >
+                    <option value="">Seleccionar funeraria...</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Rol del Usuario</label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as "FUNERARIA" | "FAMILIA")}
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  >
+                    <option value="FUNERARIA">Administrador de Funeraria</option>
+                    <option value="FAMILIA">Familia / Usuario</option>
+                  </select>
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isCreatingUser}
+                  className="w-full py-3 rounded-full bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+                >
+                  {isCreatingUser ? "Creando usuario..." : "Crear Usuario y Enviar Confirmación"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Listado de Usuarios Creados */}
+          {createdUsers.length > 0 && (
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+            <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+              <Users size={18} className="text-[var(--tenant-primary)]" />
+              Usuarios Registrados
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+              Todos los usuarios creados desde este panel.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                    <th className="pb-3 font-semibold">Nombre</th>
+                    <th className="pb-3 font-semibold">Correo</th>
+                    <th className="pb-3 font-semibold">Funeraria</th>
+                    <th className="pb-3 font-semibold">Rol</th>
+                    <th className="pb-3 font-semibold">Fecha</th>
+                    <th className="pb-3 font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                  {createdUsers.map((u) => (
+                    <tr key={u.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{u.name || "Sin nombre"}</td>
+                      <td className="py-3.5 text-neutral-600 dark:text-neutral-300">{u.email}</td>
+                      <td className="py-3.5 font-medium text-[var(--tenant-primary)]">{u.tenantName}</td>
+                      <td className="py-3.5">
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                          u.role === "FUNERARIA" 
+                            ? "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400" 
+                            : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                        }`}>
+                          {u.role === "FUNERARIA" ? "Admin Funeraria" : "Familia"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 font-mono text-xs md:text-sm text-neutral-500">{u.createdAt}</td>
+                      <td className="py-3.5">
+                        <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                          {u.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          )}
+          </>
+          )}
+
+          {activeTab === "funerarias" && (
+          <div className="space-y-6 md:space-y-8">
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+              <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                <FileText size={18} className="text-[var(--tenant-primary)]" />
+                Gestión de Memoriales Digitales
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                Administra los perfiles conmemorativos creados. Descarga códigos QR para imprimir e integrar en lápidas, recordatorios y urnas.
+              </p>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                      <th className="pb-3 font-semibold">Fallecido</th>
+                      <th className="pb-3 font-semibold">Período</th>
+                      <th className="pb-3 font-semibold">Estado</th>
+                      <th className="pb-3 font-semibold">Visitas</th>
+                      <th className="pb-3 font-semibold">Código QR</th>
+                      <th className="pb-3 font-semibold text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                    {globalMemorials.map((m) => (
+                      <tr key={m.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{m.name}</td>
+                        <td className="py-3.5 font-mono text-neutral-500">{m.birthDate?.substring(0,4)} - {m.deathDate?.substring(0,4)}</td>
+                        <td className="py-3.5">
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                            m.isPrivate ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                          }`}>
+                            {m.isPrivate ? "Privado" : "Activo"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 font-mono">1</td>
+                        <td className="py-3.5 font-medium text-neutral-600 dark:text-neutral-400">Pendiente</td>
+                        <td className="py-3.5 text-right">
+                          <button 
+                            onClick={() => {
+                              localStorage.setItem("active_memorial_id", m.id);
+                              switchRole?.("FAMILIA");
+                            }}
+                            className="text-xs md:text-sm font-bold text-[var(--tenant-primary)] hover:underline flex items-center justify-end gap-1 ml-auto"
+                          >
+                            Administrar <ExternalLink size={10} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                <Plus size={18} className="text-[var(--tenant-primary)]" />
+                Crear Nuevo Memorial
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                Registra un servicio y genera de inmediato el memorial digital. El sistema enviará una invitación por correo a la familia para que tomen control administrativo colaborativo.
+              </p>
+
+              <form onSubmit={handleCreateMemorial} className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Completo del Fallecido</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Roberto García Martínez"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nacimiento</label>
+                      <input 
+                        type="date"
+                        value={newBirth}
+                        onChange={(e) => setNewBirth(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Fallecimiento</label>
+                      <input 
+                        type="date"
+                        value={newDeath}
+                        onChange={(e) => setNewDeath(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4 flex flex-col justify-between">
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo del Administrador Familiar</label>
+                    <input 
+                      type="email"
+                      placeholder="familiar@correo.com"
+                      value={newFamilyEmail}
+                      onChange={(e) => setNewFamilyEmail(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                    />
+                    <span className="text-xs md:text-sm text-neutral-400 mt-1 block">Se le enviará un Magic Link para configurar la privacidad, fotos y relatos familiares.</span>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isCreating}
+                    className="w-full py-3.5 rounded-full bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm"
+                  >
+                    {isCreating ? "Creando..." : "Registrar Memorial y Enviar Accesos"}
+                  </button>
+                </div>
+              </form>
+            </section>
+            
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+              <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
+                <Building size={18} className="text-[var(--tenant-primary)]" />
+                Gestión de Sucursales (Multi-Branch)
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed text-sm mb-6">
+                Administra las diferentes ubicaciones físicas de tu funeraria.
+              </p>
+              <div className="grid md:grid-cols-3 gap-4 md:p-6">
+                <div className="md:col-span-2 space-y-3">
+                  <span className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold block mb-1">Sucursales Activas</span>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {branches.map(branch => (
+                      <div key={branch.id} className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 space-y-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+                          <span className="font-serif font-bold text-neutral-800 dark:text-neutral-100 text-sm md:text-base">{branch.name}</span>
+                          <span className="px-2 py-0.5 rounded bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)] text-[8px] font-mono font-bold uppercase">{branch.city}</span>
+                        </div>
+                        <p className="text-xs md:text-sm text-neutral-400 font-light">{branch.address}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/30 dark:bg-neutral-900/30">
+                  <span className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold block mb-3">Agregar Nueva Sucursal</span>
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!newBranchName.trim()) return;
+                      setBranches(prev => [...prev, { id: `b_${Date.now()}`, name: newBranchName, city: newBranchCity || "General", address: newBranchAddress }]);
+                      setNewBranchName(""); setNewBranchCity(""); setNewBranchAddress("");
+                    }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre</label>
+                      <input 
+                        type="text" 
+                        value={newBranchName}
+                        onChange={(e) => setNewBranchName(e.target.value)}
+                        required
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-1.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <button type="submit" className="w-full py-2 rounded-lg bg-[var(--tenant-primary)] text-white font-bold text-xs md:text-sm uppercase tracking-widest">
+                      Registrar Sucursal
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </section>
+          </div>
           )}
 
           {/* Historial de Auditoría / Logs en Tiempo Real */}

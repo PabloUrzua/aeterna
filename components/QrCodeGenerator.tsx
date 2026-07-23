@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Copy, Check, Download } from "lucide-react";
 import confetti from "canvas-confetti";
+import { QRCodeCanvas } from "qrcode.react";
 
 interface QrCodeGeneratorProps {
   url: string;
@@ -28,31 +29,24 @@ export default function QrCodeGenerator({ url, name }: QrCodeGeneratorProps) {
   };
 
   const handleDownload = () => {
-    // Renders a high quality canvas or downloads image
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(
-      url
-    )}`;
-    
-    // Download through fetching blob
-    fetch(qrUrl)
-      .then((response) => response.blob())
-      .then((blob) => {
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = `codigo_qr_${name.toLowerCase().replace(/\s+/g, "_")}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
+    const canvas = document.getElementById("memorial-qr-code") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas
+        .toDataURL("image/png")
+        .replace("image/png", "image/octet-stream");
+      let downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `codigo_qr_${name.toLowerCase().replace(/\s+/g, "_")}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
 
-        confetti({
-          particleCount: 30,
-          spread: 45,
-          colors: ["#1F2937", "#E5E7EB"],
-        });
-      })
-      .catch((error) => console.error("Error al descargar QR: ", error));
+      confetti({
+        particleCount: 30,
+        spread: 45,
+        colors: ["#1F2937", "#E5E7EB"],
+      });
+    }
   };
 
   return (
@@ -66,14 +60,14 @@ export default function QrCodeGenerator({ url, name }: QrCodeGeneratorProps) {
         </p>
       </div>
 
-      <div className="relative group p-4 bg-neutral-50 dark:bg-neutral-950 rounded-xl border border-neutral-100 dark:border-neutral-800">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-            url
-          )}`}
-          alt={`QR ${name}`}
-          className="w-40 h-40 object-contain dark:invert dark:hue-rotate-180"
+      <div className="relative group p-4 bg-white rounded-xl border border-neutral-100 dark:border-neutral-800 flex items-center justify-center">
+        <QRCodeCanvas 
+          id="memorial-qr-code"
+          value={url} 
+          size={160} 
+          level="H"
+          includeMargin={true}
+          className="w-40 h-40 object-contain"
         />
         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none" />
       </div>

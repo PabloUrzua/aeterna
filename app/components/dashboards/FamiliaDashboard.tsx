@@ -18,6 +18,11 @@ import {
   FolderOpen,
   Undo
 } from "lucide-react";
+import { 
+  ChevronRight,
+  RefreshCw
+} from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { useBranding } from "../../context/BrandingContext";
 import confetti from "canvas-confetti";
 
@@ -161,9 +166,9 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
               xmlns="http://www.w3.org/2000/svg"
               className="w-5 h-5 text-[var(--tenant-primary)] group-hover:scale-110 transition-transform duration-500 ease-in-out"
             >
-              <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 2v20M6 8h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            AETERNA FAMILIA
+            {config.name ? config.name.toUpperCase() : "AETERNA FAMILIA"}
           </span>
           <span className="px-2 py-0.5 rounded bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)] text-xs md:text-sm uppercase tracking-widest font-bold">
             Consola del Memorial
@@ -233,7 +238,13 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             <h4 className="font-serif text-sm font-semibold mb-1 flex items-center justify-center gap-1.5"><QrCode size={14} /> Acceso QR</h4>
             <p className="text-xs md:text-sm text-neutral-400 leading-relaxed">Código QR oficial del memorial. Imprímelo o compártelo para dar acceso directo al perfil de Alejandro.</p>
             <div className="w-28 h-28 mx-auto bg-white rounded-lg p-2.5 flex items-center justify-center border border-neutral-200 dark:border-neutral-850 shadow-inner">
-              <QrCode size={90} className="text-neutral-900" />
+              <QRCodeCanvas 
+                value={`${typeof window !== "undefined" ? window.location.origin : ""}/memorial/alejandro-valenzuela`} 
+                size={90} 
+                level="H" 
+                includeMargin={false} 
+                className="w-full h-full object-contain"
+              />
             </div>
             <a 
               href="/memorial/alejandro-valenzuela"
