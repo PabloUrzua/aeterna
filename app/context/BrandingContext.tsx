@@ -23,7 +23,7 @@ export interface TenantConfig {
 const defaultTenant: TenantConfig = {
   name: "Mi Funeraria",
   logoType: "icon",
-  logoText: "Aeterna Legacy",
+  logoText: "Amuley Legacy",
   primaryColor: "#1E3A8A",
   primaryColorHover: "#1D4ED8",
   primaryFg: "#FFFFFF",
@@ -34,7 +34,7 @@ const defaultTenant: TenantConfig = {
   fgColor: "#1F2937",
   fgDarkColor: "#F8FAFC",
   fontFamily: "sans",
-  domain: "memoriales.aeterna.app",
+  domain: "memoriales.amuley.com",
   colorMeaning: "Azul Profundo: Transmite confianza, esperanza y solidez tecnológica para preservar recuerdos."
 };
 
@@ -43,13 +43,13 @@ interface BrandingContextType {
   updateConfig: (newConfig: Partial<TenantConfig>) => void;
   resetConfig: () => void;
   activePreset: string;
-  applyPreset: (presetName: "aeterna" | "lapaz" | "elysium" | "aurora") => void;
+  applyPreset: (presetName: "amuley" | "lapaz" | "elysium" | "aurora") => void;
 }
 
 const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
 
 export const presets: Record<string, TenantConfig> = {
-  aeterna: { ...defaultTenant },
+  amuley: { ...defaultTenant },
   lapaz: {
     name: "Funeraria La Paz",
     logoType: "text",
@@ -105,20 +105,20 @@ export const presets: Record<string, TenantConfig> = {
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<TenantConfig>(defaultTenant);
-  const [activePreset, setActivePreset] = useState<string>("aeterna");
+  const [activePreset, setActivePreset] = useState<string>("amuley");
 
   // Load from localstorage on client mount
   // Version key: bump this when the default palette changes to clear stale configs
   const PALETTE_VERSION = "v2-2026-07-14";
   useEffect(() => {
-    const savedVersion = localStorage.getItem("aeterna_palette_version");
+    const savedVersion = localStorage.getItem("amuley_palette_version");
     if (savedVersion !== PALETTE_VERSION) {
       // Clear stale config from previous palette versions
-      localStorage.removeItem("aeterna_tenant_config");
-      localStorage.setItem("aeterna_palette_version", PALETTE_VERSION);
+      localStorage.removeItem("amuley_tenant_config");
+      localStorage.setItem("amuley_palette_version", PALETTE_VERSION);
       return;
     }
-    const saved = localStorage.getItem("aeterna_tenant_config");
+    const saved = localStorage.getItem("amuley_tenant_config");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -138,25 +138,25 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const updateConfig = (newConfig: Partial<TenantConfig>) => {
     setConfig((prev) => {
       const updated = { ...prev, ...newConfig };
-      localStorage.setItem("aeterna_tenant_config", JSON.stringify(updated));
+      localStorage.setItem("amuley_tenant_config", JSON.stringify(updated));
       return updated;
     });
     setActivePreset("custom");
   };
 
-  const applyPreset = (presetName: "aeterna" | "lapaz" | "elysium" | "aurora") => {
+  const applyPreset = (presetName: "amuley" | "lapaz" | "elysium" | "aurora") => {
     const preset = presets[presetName];
     if (preset) {
       setConfig(preset);
       setActivePreset(presetName);
-      localStorage.setItem("aeterna_tenant_config", JSON.stringify(preset));
+      localStorage.setItem("amuley_tenant_config", JSON.stringify(preset));
     }
   };
 
   const resetConfig = () => {
     setConfig(defaultTenant);
-    setActivePreset("aeterna");
-    localStorage.setItem("aeterna_tenant_config", JSON.stringify(defaultTenant));
+    setActivePreset("amuley");
+    localStorage.setItem("amuley_tenant_config", JSON.stringify(defaultTenant));
   };
 
   // Convert hex to rgb string format "r, g, b"

@@ -168,7 +168,7 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             >
               <path d="M12 2v20M6 8h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {config.name ? config.name.toUpperCase() : "AETERNA FAMILIA"}
+            {config.name ? config.name.toUpperCase() : "AMULEY FAMILIA"}
           </span>
           <span className="px-2 py-0.5 rounded bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)] text-xs md:text-sm uppercase tracking-widest font-bold">
             Consola del Memorial

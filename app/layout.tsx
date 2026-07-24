@@ -14,21 +14,24 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Aeterna | Memoriales Digitales Premium & Marca Blanca",
+  title: "Amuley | Memoriales Digitales Premium & Marca Blanca",
   description: "Preserva para siempre la historia y los recuerdos de tus seres queridos en un espacio privado, seguro, elegante y colaborativo. Solución SaaS de marca blanca para empresas funerarias.",
-  keywords: ["memorial digital", "marca blanca funerarias", "código qr lápidas", "árbol genealógico", "legado familiar", "aeterna", "tributo virtual"],
-  authors: [{ name: "Aeterna Legacy Team" }],
+  keywords: ["memorial digital", "marca blanca funerarias", "código qr lápidas", "árbol genealógico", "legado familiar", "amuley", "tributo virtual"],
+  authors: [{ name: "Amuley Legacy Team" }],
   openGraph: {
-    title: "Aeterna | Plataforma de Memoriales Digitales Premium",
+    title: "Amuley | Plataforma de Memoriales Digitales Premium",
     description: "Espacio familiar privado para preservar fotos, audios, cartas y recuerdos eternamente con tecnología de código QR y marca blanca.",
-    url: "https://aeterna.app",
-    siteName: "Aeterna",
+    url: "https://amuley.com",
+    siteName: "Amuley",
     locale: "es_CL",
     type: "website",
   },
   icons: {
     icon: "/favicon.ico"
-  }
+  },
+  verification: {
+    google: "WpXbuXRp1MMqhX2cUH1hftr5jJCLJ5ccCJq1OqUUzZY",
+  },
 };
 
 export default function RootLayout({

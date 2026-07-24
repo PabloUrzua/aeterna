@@ -119,7 +119,7 @@ export default function LoginPage() {
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="font-serif text-lg tracking-[0.25em] font-bold uppercase text-[#111111]">
-              AETERNA
+              AMULEY
             </span>
           </Link>
           <h2 className="font-serif text-2xl font-normal text-[#111111]">

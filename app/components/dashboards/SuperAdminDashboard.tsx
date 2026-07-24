@@ -90,7 +90,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const [newFamilyEmail, setNewFamilyEmail] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Aeterna Legacy");
+  const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Amuley Legacy");
   const [emailGreeting, setEmailGreeting] = useState("Estimada familia Valenzuela,");
   const [emailBody, setEmailBody] = useState("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
@@ -106,7 +106,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const [createdUsers, setCreatedUsers] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const savedUsers = localStorage.getItem("aeterna_users");
+    const savedUsers = localStorage.getItem("amuley_users");
     if (savedUsers) {
       setCreatedUsers(JSON.parse(savedUsers));
     }
@@ -139,10 +139,10 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           status: "Pendiente Confirmación"
         };
 
-        const savedUsers = localStorage.getItem("aeterna_users");
+        const savedUsers = localStorage.getItem("amuley_users");
         const allUsers = savedUsers ? JSON.parse(savedUsers) : [];
         const updated = [...allUsers, newUser];
-        localStorage.setItem("aeterna_users", JSON.stringify(updated));
+        localStorage.setItem("amuley_users", JSON.stringify(updated));
         setCreatedUsers(updated);
 
         setUserCreateMsg({ type: "success", text: `Usuario ${newUserEmail} creado exitosamente. Se envió correo de confirmación.` });
@@ -177,14 +177,14 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         mainImage: "https://picsum.photos/id/93/2000/1200",
         coverImage: "https://picsum.photos/id/93/2000/1200",
         isPrivate: false,
-        tenantName: "Aeterna Default",
+        tenantName: "Amuley Default",
         createdBy: "cjxd123@gmail.com"
       };
 
-      const savedMems = localStorage.getItem("aeterna_memorials");
+      const savedMems = localStorage.getItem("amuley_memorials");
       const allMems = savedMems ? JSON.parse(savedMems) : [];
       const updatedAllMems = [...allMems, newMemorial];
-      localStorage.setItem("aeterna_memorials", JSON.stringify(updatedAllMems));
+      localStorage.setItem("amuley_memorials", JSON.stringify(updatedAllMems));
 
       setGlobalMemorials(prev => [...prev, newMemorial]);
 
@@ -204,7 +204,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   };
 
   React.useEffect(() => {
-    const savedMems = localStorage.getItem("aeterna_memorials");
+    const savedMems = localStorage.getItem("amuley_memorials");
     if (savedMems) {
       setGlobalMemorials(JSON.parse(savedMems));
     }

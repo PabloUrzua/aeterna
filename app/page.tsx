@@ -40,7 +40,7 @@ export default function LandingPage() {
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="font-serif text-sm sm:text-base md:text-xl tracking-[0.1em] md:tracking-[0.3em] font-bold uppercase text-[#967B62]">
-              AETERNA
+              AMULEY
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4 md:gap-6 shrink-0">
@@ -101,7 +101,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-2 w-full sm:w-auto overflow-hidden">
                   <span className="w-3 h-3 rounded-full bg-[#EBE6DF] shrink-0" />
                   <span className="w-3 h-3 rounded-full bg-[#EBE6DF] shrink-0" />
-                  <span className="text-xs sm:text-sm font-mono text-[#635D58] font-medium truncate">recuerdos.aeterna.app/alejandro-valenzuela</span>
+                  <span className="text-xs sm:text-sm font-mono text-[#635D58] font-medium truncate">recuerdos.amuley.com/alejandro-valenzuela</span>
                 </div>
                 <span className="text-[10px] sm:text-xs uppercase tracking-widest text-[#967B62] font-bold bg-[#967B62]/10 px-3 py-1 rounded border border-[#967B62]/20 whitespace-nowrap">
                   Privacidad: Público
@@ -213,7 +213,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-12 border-t border-[#EBE6DF] text-center text-sm text-[#635D58] font-mono space-y-3 bg-white/80">
-        <p>Aeterna Memorial Platform © 2026. Todos los derechos reservados.</p>
+        <p>Amuley Memorial Platform © 2026. Todos los derechos reservados.</p>
         <p className="opacity-80 flex items-center justify-center gap-1.5 hover:text-[#967B62] transition-colors cursor-default">
           Hecho con respeto, minimalismo y elegancia <Sparkles size={12} className="text-[#967B62]" />
         </p>

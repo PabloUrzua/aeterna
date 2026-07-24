@@ -38,7 +38,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       setSessionEmail(currentEmail);
     }
 
-    const savedMems = localStorage.getItem("aeterna_memorials");
+    const savedMems = localStorage.getItem("amuley_memorials");
     if (savedMems) {
       const allMems = JSON.parse(savedMems);
       if (currentEmail && currentEmail !== "cjxd123@gmail.com") {
@@ -67,7 +67,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const [isCreating, setIsCreating] = useState(false);
 
   // Plantilla de Email (Magic Link)
-  const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Aeterna Legacy");
+  const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Amuley Legacy");
   const [emailGreeting, setEmailGreeting] = useState("Estimada familia Valenzuela,");
   const [emailBody, setEmailBody] = useState("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
@@ -136,10 +136,10 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
         createdBy: sessionEmail || "cjxd123@gmail.com"
       };
 
-      const savedMems = localStorage.getItem("aeterna_memorials");
+      const savedMems = localStorage.getItem("amuley_memorials");
       const allMems = savedMems ? JSON.parse(savedMems) : [];
       const updatedAllMems = [...allMems, newMemorial];
-      localStorage.setItem("aeterna_memorials", JSON.stringify(updatedAllMems));
+      localStorage.setItem("amuley_memorials", JSON.stringify(updatedAllMems));
 
       setCreatedMemorials(prev => [...prev, newMemorial]);
 
@@ -314,7 +314,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                   return (
                     <button
                       key={key}
-                      onClick={() => applyPreset(key as "aeterna" | "lapaz" | "elysium" | "aurora")}
+                      onClick={() => applyPreset(key as "amuley" | "lapaz" | "elysium" | "aurora")}
                       className={`p-3.5 rounded-xl border text-left flex flex-col justify-between h-28 transition-all ${
                         activePreset === key 
                           ? "border-[var(--tenant-primary)] bg-[var(--tenant-primary)]/5" 
@@ -397,7 +397,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     </div>
                     <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed">
                       Crea un registro CNAME en tu proveedor de hosting o DNS (Cloudflare, GoDaddy, etc.) apuntando a:
-                      <code className="block mt-1 font-mono text-xs md:text-sm text-[var(--tenant-primary)] bg-white dark:bg-neutral-900 px-2 py-1 rounded border border-neutral-200 dark:border-neutral-800">cname.aeterna.app</code>
+                      <code className="block mt-1 font-mono text-xs md:text-sm text-[var(--tenant-primary)] bg-white dark:bg-neutral-900 px-2 py-1 rounded border border-neutral-200 dark:border-neutral-800">cname.amuley.com</code>
                     </p>
                   </div>
                 </div>
@@ -759,7 +759,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     <button
                       type="button"
                       onClick={() => {
-                        setEmailSubject("Acceso a tu Memorial Digital - Aeterna Legacy");
+                        setEmailSubject("Acceso a tu Memorial Digital - Amuley Legacy");
                         setEmailGreeting("Estimada familia Valenzuela,");
                         setEmailBody("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
                         confetti({

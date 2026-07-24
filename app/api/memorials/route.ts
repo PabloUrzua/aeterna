@@ -15,7 +15,7 @@ const mockMemorials = [
     coverImage: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
     isPrivate: false,
     password: null,
-    qrCodeUrl: "https://recuerdos.aeterna.app/memorial/alejandro-valenzuela",
+    qrCodeUrl: "https://recuerdos.amuley.com/memorial/alejandro-valenzuela",
     creatorId: "system-admin",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           isPrivate: !!isPrivate,
           password: password || null,
           creatorId: defaultCreatorId,
-          qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://aeterna.app"}/memorial/${cleanSlug}`
+          qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://amuley.com"}/memorial/${cleanSlug}`
         }
       });
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         coverImage: coverImage || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
         isPrivate: !!isPrivate,
         password: password || null,
-        qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://aeterna.app"}/memorial/${cleanSlug}`,
+        qrCodeUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://amuley.com"}/memorial/${cleanSlug}`,
         creatorId: creatorId || "system-admin",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

@@ -321,7 +321,7 @@ export default function MemorialPage() {
           )}
 
           <div className="text-sm text-neutral-500 font-mono pt-3 border-t border-stone-100 ">
-            Aeterna Legacy Preservation System
+            Amuley Legacy Preservation System
           </div>
         </div>
       </div>
@@ -752,7 +752,7 @@ export default function MemorialPage() {
 
       {/* Footer */}
       <footer className="py-12 border-t border-stone-200/40 text-center text-base text-neutral-500 font-mono">
-        <p>Aeterna Memorial Platform © 2026. Todos los derechos reservados.</p>
+        <p>Amuley Memorial Platform © 2026. Todos los derechos reservados.</p>
       </footer>
 
     </div>
