@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/utils/supabase/server";
 
 // In-memory mock database for fallback
 const mockMemorials = [
@@ -82,27 +83,15 @@ export async function POST(request: NextRequest) {
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
 
     try {
-      // Check if creator exists or create a default user
-      let defaultCreatorId = creatorId || "system-admin";
-      
-      try {
-        const defaultUser = await prisma.user.findFirst();
-        if (defaultUser) {
-          defaultCreatorId = defaultUser.id;
-        } else {
-          const user = await prisma.user.create({
-            data: {
-              email: "familiar@aeterna.app",
-              password: "securepassword",
-              name: "Familia Valenzuela",
-              role: "ADMIN"
-            }
-          });
-          defaultCreatorId = user.id;
-        }
-      } catch (err) {
-        console.warn("Could not handle user checking in DB", err);
+      const supabase = await createClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (!user || error) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
       }
+
+      // Check if creator exists or create a default user
+      let defaultCreatorId = user.id;
 
       const newMemorial = await prisma.memorial.create({
         data: {
