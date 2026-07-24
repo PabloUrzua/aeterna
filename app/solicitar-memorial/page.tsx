@@ -116,7 +116,7 @@ export default function SolicitarMemorialPage() {
                   <div className="relative">
                     <DatePicker
                       selected={reqBirth}
-                      onChange={(date) => setReqBirth(date)}
+                      onChange={(date: Date | null) => setReqBirth(date)}
                       locale={es}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Seleccionar fecha"
@@ -135,7 +135,7 @@ export default function SolicitarMemorialPage() {
                   <div className="relative">
                     <DatePicker
                       selected={reqDeath}
-                      onChange={(date) => setReqDeath(date)}
+                      onChange={(date: Date | null) => setReqDeath(date)}
                       locale={es}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Seleccionar fecha"

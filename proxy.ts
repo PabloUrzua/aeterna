@@ -9,8 +9,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedPath = path.startsWith('/api') || path === '/login' || path === '/register' || path === '/solicitar-memorial';
 
   if (isProtectedPath) {
-    const ip = request.ip || 
-               request.headers.get('x-real-ip') || 
+    const ip = request.headers.get('x-real-ip') || 
                request.headers.get('x-forwarded-for') || 
                '127.0.0.1';
                
