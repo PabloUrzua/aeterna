@@ -110,14 +110,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-stone-200/50 p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-8 relative z-10 transition-all duration-500 hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)]">
         <div className="space-y-3 text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-3 group mb-2">
-            <svg 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 md:w-7 md:h-7 text-[#967B62] group-hover:scale-110 transition-transform duration-500 ease-out"
-            >
-              <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <img 
+              src="/logo.png" 
+              alt="Amuley Logo" 
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border border-[#967B62]/30 group-hover:scale-110 transition-transform duration-500 ease-out"
+            />
             <span className="font-serif text-lg tracking-[0.25em] font-bold uppercase text-[#111111]">
               AMULEY
             </span>
