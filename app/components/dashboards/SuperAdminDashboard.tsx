@@ -38,7 +38,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const { config } = useBranding();
 
   const [globalMemorials, setGlobalMemorials] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"tenants" | "profiles" | "funerarias">("tenants");
+  const [activeTab, setActiveTab] = useState<"tenants" | "profiles" | "funerarias" | "sucursales">("tenants");
   const [tenants, setTenants] = useState<any[]>([]);
   
   // Calculate dynamic stats
@@ -76,13 +76,19 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   }, [tenants, globalMemorials]);
 
   // Funeraria Tools State
-  const [branches, setBranches] = useState([
-    { id: "b1", name: "Sucursal Centro", city: "Santiago", address: "Av. Providencia 1024" },
-    { id: "b2", name: "Sucursal Valparaíso", city: "Valparaíso", address: "Condell 450" }
-  ]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [newBranchName, setNewBranchName] = useState("");
   const [newBranchCity, setNewBranchCity] = useState("");
   const [newBranchAddress, setNewBranchAddress] = useState("");
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false);
+  const [branchCreateMsg, setBranchCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Tenant Creation State
+  const [newTenantName, setNewTenantName] = useState("");
+  const [newTenantDomain, setNewTenantDomain] = useState("");
+  const [newTenantPlan, setNewTenantPlan] = useState("Growth B2B");
+  const [isCreatingTenant, setIsCreatingTenant] = useState(false);
+  const [tenantCreateMsg, setTenantCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [newName, setNewName] = useState("");
   const [newBirth, setNewBirth] = useState("");
@@ -100,6 +106,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserTenant, setNewUserTenant] = useState("");
+  const [newUserBranch, setNewUserBranch] = useState("");
   const [newUserRole, setNewUserRole] = useState<"FUNERARIA" | "FAMILIA">("FUNERARIA");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [userCreateMsg, setUserCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -109,6 +116,18 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
     const savedUsers = localStorage.getItem("amuley_users");
     if (savedUsers) {
       setCreatedUsers(JSON.parse(savedUsers));
+    }
+    
+    const savedBranches = localStorage.getItem("amuley_branches");
+    if (savedBranches) {
+      setBranches(JSON.parse(savedBranches));
+    } else {
+      const defaultBranches = [
+        { id: "b1", name: "Sucursal Centro", city: "Santiago", address: "Av. Providencia 1024" },
+        { id: "b2", name: "Sucursal Valparaíso", city: "Valparaíso", address: "Condell 450" }
+      ];
+      setBranches(defaultBranches);
+      localStorage.setItem("amuley_branches", JSON.stringify(defaultBranches));
     }
   }, []);
 
@@ -135,6 +154,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           email: newUserEmail,
           role: newUserRole,
           tenantName: newUserTenant,
+          branchName: newUserBranch || "Global",
           createdAt: new Date().toISOString().substring(0, 10),
           status: "Pendiente Confirmación"
         };
@@ -150,6 +170,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         setNewUserEmail("");
         setNewUserPassword("");
         setNewUserTenant("");
+        setNewUserBranch("");
         confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
       }
     } catch (err: any) {
@@ -157,6 +178,71 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
     } finally {
       setIsCreatingUser(false);
     }
+  };
+
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchName.trim() || !newBranchCity.trim() || !newBranchAddress.trim()) return;
+    
+    setIsCreatingBranch(true);
+    setBranchCreateMsg(null);
+
+    setTimeout(() => {
+      const newBranch = {
+        id: `b-${Date.now()}`,
+        name: newBranchName,
+        city: newBranchCity,
+        address: newBranchAddress
+      };
+      
+      const savedBranches = localStorage.getItem("amuley_branches");
+      const allBranches = savedBranches ? JSON.parse(savedBranches) : [];
+      const updated = [...allBranches, newBranch];
+      localStorage.setItem("amuley_branches", JSON.stringify(updated));
+      setBranches(updated);
+      
+      setBranchCreateMsg({ type: "success", text: `Sucursal "${newBranchName}" creada con éxito.` });
+      setNewBranchName("");
+      setNewBranchCity("");
+      setNewBranchAddress("");
+      setIsCreatingBranch(false);
+      
+      confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+    }, 800);
+  };
+
+  const handleCreateTenant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTenantName.trim() || !newTenantDomain.trim()) return;
+
+    setIsCreatingTenant(true);
+    setTenantCreateMsg(null);
+
+    setTimeout(() => {
+      const newTenant = {
+        id: `t-${Date.now()}`,
+        name: newTenantName,
+        domain: newTenantDomain,
+        plan: newTenantPlan,
+        status: "Activo",
+        memorials: 0,
+        date: new Date().toISOString().substring(0, 10)
+      };
+
+      const savedTenants = localStorage.getItem("aeterna_tenants");
+      const allTenants = savedTenants ? JSON.parse(savedTenants) : [];
+      const updated = [...allTenants, newTenant];
+      localStorage.setItem("aeterna_tenants", JSON.stringify(updated));
+      setTenants(updated);
+
+      setTenantCreateMsg({ type: "success", text: `Funeraria "${newTenantName}" registrada exitosamente.` });
+      setNewTenantName("");
+      setNewTenantDomain("");
+      setNewTenantPlan("Growth B2B");
+      setIsCreatingTenant(false);
+
+      confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+    }, 800);
   };
 
   const handleCreateMemorial = (e: React.FormEvent) => {
@@ -340,6 +426,16 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
             >
               <Users size={14} /> Gestión Global de Perfiles
             </button>
+            <button 
+              onClick={() => setActiveTab("sucursales")}
+              className={`w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "sucursales" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Building size={14} /> Gestión de Sucursales
+            </button>
           </div>
 
           {/* Operaciones del Sistema */}
@@ -487,12 +583,69 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           {/* Directorio de Funerarias */}
           {activeTab === "tenants" && (
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
-            <h2 className="font-serif text-xl font-bold mb-6 flex items-center gap-2">
+            <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
               <Building size={18} className="text-[var(--tenant-primary)]" />
               Directorio de Clientes B2B SaaS
             </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+              Registra nuevas funerarias para generar su instancia White Label o administra las existentes.
+            </p>
+
+            {tenantCreateMsg && (
+              <div className={`p-4 rounded-xl text-sm font-medium mb-4 ${
+                tenantCreateMsg.type === "success" 
+                  ? "bg-green-50 border border-green-200 text-green-700" 
+                  : "bg-red-50 border border-red-200 text-red-600"
+              }`}>
+                {tenantCreateMsg.text}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateTenant} className="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end mb-8">
+              <div>
+                <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Funeraria</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej. Funeraria La Paz"
+                  value={newTenantName}
+                  onChange={(e) => setNewTenantName(e.target.value)}
+                  required
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                />
+              </div>
+              <div>
+                <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Dominio</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej. lapaz.aeterna.app"
+                  value={newTenantDomain}
+                  onChange={(e) => setNewTenantDomain(e.target.value)}
+                  required
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                />
+              </div>
+              <div>
+                <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Plan SaaS</label>
+                <select
+                  value={newTenantPlan}
+                  onChange={(e) => setNewTenantPlan(e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                >
+                  <option value="Enterprise">Enterprise</option>
+                  <option value="Growth B2B">Growth B2B</option>
+                  <option value="Essential B2B">Essential B2B</option>
+                </select>
+              </div>
+              <button 
+                type="submit"
+                disabled={isCreatingTenant}
+                className="w-full py-2.5 px-6 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+              >
+                {isCreatingTenant ? "..." : "Registrar"}
+              </button>
+            </form>
             
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto mt-6">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
@@ -664,6 +817,19 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                   </select>
                 </div>
                 <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Sucursal</label>
+                  <select
+                    value={newUserBranch}
+                    onChange={(e) => setNewUserBranch(e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  >
+                    <option value="">Global / Todas</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name} ({b.city})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Rol del Usuario</label>
                   <select
                     value={newUserRole}
@@ -702,6 +868,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                     <th className="pb-3 font-semibold">Nombre</th>
                     <th className="pb-3 font-semibold">Correo</th>
                     <th className="pb-3 font-semibold">Funeraria</th>
+                    <th className="pb-3 font-semibold">Sucursal</th>
                     <th className="pb-3 font-semibold">Rol</th>
                     <th className="pb-3 font-semibold">Fecha</th>
                     <th className="pb-3 font-semibold">Estado</th>
@@ -713,6 +880,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                       <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{u.name || "Sin nombre"}</td>
                       <td className="py-3.5 text-neutral-600 dark:text-neutral-300">{u.email}</td>
                       <td className="py-3.5 font-medium text-[var(--tenant-primary)]">{u.tenantName}</td>
+                      <td className="py-3.5 font-medium text-neutral-600 dark:text-neutral-400">{u.branchName || "Global"}</td>
                       <td className="py-3.5">
                         <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
                           u.role === "FUNERARIA" 
@@ -736,6 +904,99 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           </section>
           )}
           </>
+          )}
+
+          {activeTab === "sucursales" && (
+          <div className="space-y-6 md:space-y-8">
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+              <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                <Building size={18} className="text-[var(--tenant-primary)]" />
+                Gestión de Sucursales
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                Administra las sucursales de las funerarias. Estas sucursales podrán ser asignadas a los administradores de funeraria al momento de crear un usuario.
+              </p>
+
+              {branchCreateMsg && (
+                <div className={`p-4 rounded-xl text-sm font-medium mb-4 ${
+                  branchCreateMsg.type === "success" 
+                    ? "bg-green-50 border border-green-200 text-green-700" 
+                    : "bg-red-50 border border-red-200 text-red-600"
+                }`}>
+                  {branchCreateMsg.text}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateBranch} className="grid md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end mb-8">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre de Sucursal</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Sucursal Providencia"
+                    value={newBranchName}
+                    onChange={(e) => setNewBranchName(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Ciudad</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Santiago"
+                    value={newBranchCity}
+                    onChange={(e) => setNewBranchCity(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Dirección</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Av. Siempre Viva 742"
+                    value={newBranchAddress}
+                    onChange={(e) => setNewBranchAddress(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isCreatingBranch}
+                  className="w-full py-2.5 px-6 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+                >
+                  {isCreatingBranch ? "..." : "Crear"}
+                </button>
+              </form>
+
+              <div className="overflow-x-auto mt-6">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                      <th className="pb-3 font-semibold">Nombre</th>
+                      <th className="pb-3 font-semibold">Ciudad</th>
+                      <th className="pb-3 font-semibold">Dirección</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                    {branches.map((b) => (
+                      <tr key={b.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{b.name}</td>
+                        <td className="py-3.5 font-medium text-neutral-600 dark:text-neutral-400">{b.city}</td>
+                        <td className="py-3.5 text-neutral-500">{b.address}</td>
+                      </tr>
+                    ))}
+                    {branches.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="py-6 text-center text-neutral-500 italic">No hay sucursales creadas.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
           )}
 
           {activeTab === "funerarias" && (

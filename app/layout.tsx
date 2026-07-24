@@ -27,7 +27,8 @@ export const metadata: Metadata = {
     type: "website",
   },
   icons: {
-    icon: "/favicon.ico"
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
   verification: {
     google: "WpXbuXRp1MMqhX2cUH1hftr5jJCLJ5ccCJq1OqUUzZY",
