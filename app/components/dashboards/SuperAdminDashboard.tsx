@@ -230,10 +230,10 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         date: new Date().toISOString().substring(0, 10)
       };
 
-      const savedTenants = localStorage.getItem("aeterna_tenants");
+      const savedTenants = localStorage.getItem("amuley_tenants");
       const allTenants = savedTenants ? JSON.parse(savedTenants) : [];
       const updated = [...allTenants, newTenant];
-      localStorage.setItem("aeterna_tenants", JSON.stringify(updated));
+      localStorage.setItem("amuley_tenants", JSON.stringify(updated));
       setTenants(updated);
 
       setTenantCreateMsg({ type: "success", text: `Funeraria "${newTenantName}" registrada exitosamente.` });
@@ -296,14 +296,14 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
       setGlobalMemorials(JSON.parse(savedMems));
     }
 
-    const savedTenants = localStorage.getItem("aeterna_tenants");
+    const savedTenants = localStorage.getItem("amuley_tenants");
     if (savedTenants) {
       setTenants(JSON.parse(savedTenants));
     } else {
       // Provide one default real tenant so the platform can be used
-      const defaultTenant = [{ id: "t1", name: "Aeterna Default", domain: "memoriales.aeterna.app", plan: "Enterprise", status: "Activo", memorials: 0, date: new Date().toISOString().substring(0, 10) }];
+      const defaultTenant = [{ id: "t1", name: "Amuley Default", domain: "memoriales.amuley.app", plan: "Enterprise", status: "Activo", memorials: 0, date: new Date().toISOString().substring(0, 10) }];
       setTenants(defaultTenant);
-      localStorage.setItem("aeterna_tenants", JSON.stringify(defaultTenant));
+      localStorage.setItem("amuley_tenants", JSON.stringify(defaultTenant));
     }
   }, []);
 
@@ -359,7 +359,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
       return t;
     });
     setTenants(updatedTenants);
-    localStorage.setItem("aeterna_tenants", JSON.stringify(updatedTenants));
+    localStorage.setItem("amuley_tenants", JSON.stringify(updatedTenants));
   };
 
   return (
@@ -369,7 +369,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
       <aside className="w-64 lg:w-72 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex-shrink-0 flex flex-col h-full z-20 shadow-sm hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
           <span className="font-serif text-xl tracking-wider font-bold">
-            AE<span className="text-[var(--tenant-primary)]">T</span>ERNA
+            AM<span className="text-[var(--tenant-primary)]">U</span>LEY
           </span>
         </div>
         
@@ -662,7 +662,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                 <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Dominio</label>
                 <input 
                   type="text" 
-                  placeholder="Ej. lapaz.aeterna.app"
+                  placeholder="Ej. lapaz.amuley.app"
                   value={newTenantDomain}
                   onChange={(e) => setNewTenantDomain(e.target.value)}
                   required
