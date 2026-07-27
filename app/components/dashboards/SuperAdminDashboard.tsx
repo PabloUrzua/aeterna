@@ -46,9 +46,9 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
     return tenants.reduce((total, tenant) => {
       if (tenant.status !== "Activo") return total;
       switch (tenant.plan) {
-        case "Enterprise": return total + 1200;
-        case "Growth B2B": return total + 500;
-        case "Essential B2B": return total + 150;
+        case "Enterprise": return total + 1200000;
+        case "Growth B2B": return total + 500000;
+        case "Essential B2B": return total + 150000;
         default: return total;
       }
     }, 0);
@@ -60,20 +60,18 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
     return ((inactive / tenants.length) * 100).toFixed(1);
   };
   
-  // Generar datos históricos simulados terminando en el valor EXACTO real
+  // Generar datos históricos simulados terminando en el valor EXACTO real de ingresos
   const chartData = React.useMemo(() => {
-    const currentMRR = calculateMRR();
-    const currentMemorials = globalMemorials.length;
-    
+    const currentRevenue = calculateMRR();
     return [
-      { name: "Feb", mrr: Math.round(currentMRR * 0.4), memorials: Math.round(currentMemorials * 0.3) },
-      { name: "Mar", mrr: Math.round(currentMRR * 0.55), memorials: Math.round(currentMemorials * 0.45) },
-      { name: "Abr", mrr: Math.round(currentMRR * 0.7), memorials: Math.round(currentMemorials * 0.6) },
-      { name: "May", mrr: Math.round(currentMRR * 0.8), memorials: Math.round(currentMemorials * 0.8) },
-      { name: "Jun", mrr: Math.round(currentMRR * 0.92), memorials: Math.round(currentMemorials * 0.9) },
-      { name: "Jul (Actual)", mrr: currentMRR, memorials: currentMemorials }
+      { name: "Feb", revenue: Math.round(currentRevenue * 0.4) },
+      { name: "Mar", revenue: Math.round(currentRevenue * 0.55) },
+      { name: "Abr", revenue: Math.round(currentRevenue * 0.7) },
+      { name: "May", revenue: Math.round(currentRevenue * 0.8) },
+      { name: "Jun", revenue: Math.round(currentRevenue * 0.92) },
+      { name: "Jul (Actual)", revenue: currentRevenue }
     ];
-  }, [tenants, globalMemorials]);
+  }, [tenants]);
 
   // Funeraria Tools State
   const [branches, setBranches] = useState<any[]>([]);
@@ -501,9 +499,9 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                 {/* Métricas Globales */}
                 <section className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="glass-panel p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">M.R.R. Global</span>
+                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Ingresos Generados</span>
                     <span className="text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100 flex items-center gap-1">
-                      ${calculateMRR().toLocaleString()} <TrendingUp size={14} className="text-green-500" />
+                      ${calculateMRR().toLocaleString('es-CL')} <TrendingUp size={14} className="text-green-500" />
                     </span>
                     <span className="text-[8px] text-neutral-400 mt-1 block">Basado en planes activos</span>
                   </div>
@@ -539,7 +537,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800">
             <h2 className="font-serif text-xl font-bold mb-6 flex items-center gap-2">
               <Activity size={18} className="text-[var(--tenant-primary)]" />
-              Evolución de Plataforma (MRR vs Memoriales)
+              Ingresos Generados de la Empresa
             </h2>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -568,6 +566,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    tickFormatter={(value) => `$${value.toLocaleString('es-CL')}`}
                   />
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(156, 163, 175, 0.15)" />
                   <Tooltip 
@@ -581,21 +580,12 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                   />
                   <Area 
                     type="monotone" 
-                    dataKey="mrr" 
-                    name="M.R.R. (USD)"
+                    dataKey="revenue" 
+                    name="Ingresos (CLP)"
                     stroke="var(--tenant-primary)" 
                     strokeWidth={3}
                     fillOpacity={1} 
                     fill="url(#colorMrr)" 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="memorials" 
-                    name="Memoriales Activos"
-                    stroke="#14B8A6" 
-                    strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorMemorials)" 
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -686,9 +676,9 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
                   onChange={(e) => setNewTenantPlan(e.target.value)}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
                 >
-                  <option value="Enterprise">Enterprise</option>
-                  <option value="Growth B2B">Growth B2B</option>
-                  <option value="Essential B2B">Essential B2B</option>
+                  <option value="Enterprise">Enterprise ($1.200.000)</option>
+                  <option value="Growth B2B">Growth B2B ($500.000)</option>
+                  <option value="Essential B2B">Essential B2B ($150.000)</option>
                 </select>
               </div>
               <button 
