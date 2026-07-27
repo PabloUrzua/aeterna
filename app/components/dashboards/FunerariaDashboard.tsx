@@ -287,6 +287,23 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       localStorage.setItem("amuley_users", JSON.stringify(updatedUsers));
       setTenantUsers(updatedUsers.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
 
+      const invite = {
+        id: newMemorial.id,
+        slug: newMemorial.slug,
+        name: newMemorial.name,
+        birthDate: newMemorial.birthDate,
+        deathDate: newMemorial.deathDate,
+        mainImage: newMemorial.mainImage,
+        invitedBy: config.name,
+        invitedDate: new Date().toISOString(),
+        relation: "Administrador Familiar",
+        tenantName: config.name,
+        inviteEmail: newFamilyEmail
+      };
+      const existingInvitesStr = localStorage.getItem("amuley_user_invites");
+      const existingInvites = existingInvitesStr ? JSON.parse(existingInvitesStr) : [];
+      localStorage.setItem("amuley_user_invites", JSON.stringify([...existingInvites, invite]));
+
       setIsCreating(false);
       setNewName("");
       setNewBirth("");

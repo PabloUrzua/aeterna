@@ -46,11 +46,11 @@ export default function UserDashboard() {
   const [myRequests, setMyRequests] = useState<{name: string; date: string; status: string}[]>([]);
 
   useEffect(() => {
-    // Load session
+    let parsedSession = null;
     const saved = localStorage.getItem("user_session");
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setSession(parsed);
+      parsedSession = JSON.parse(saved);
+      setSession(parsedSession);
     }
 
     // Calcular fecha de registro
@@ -66,7 +66,9 @@ export default function UserDashboard() {
     // Cargar memoriales a los que fue invitado
     const invitesStr = localStorage.getItem("amuley_user_invites");
     if (invitesStr) {
-      setInvitedMemorials(JSON.parse(invitesStr));
+      const allInvites = JSON.parse(invitesStr);
+      const myInvites = parsedSession ? allInvites.filter((i: any) => i.inviteEmail === parsedSession.email) : [];
+      setInvitedMemorials(myInvites);
     }
 
     // Cargar solicitudes previas

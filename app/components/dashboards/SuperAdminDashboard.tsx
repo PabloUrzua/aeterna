@@ -64,6 +64,44 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
       if (error) {
         setInviteSuccessMsg({ type: "error", text: error.message });
       } else {
+        const memorial = globalMemorials.find(m => m.id === inviteMemorialId);
+        if (memorial) {
+          const invite = {
+            id: memorial.id,
+            slug: memorial.slug,
+            name: memorial.name,
+            birthDate: memorial.birthDate,
+            deathDate: memorial.deathDate,
+            mainImage: memorial.mainImage,
+            invitedBy: "Amuley Default",
+            invitedDate: new Date().toISOString(),
+            relation: "Administrador Familiar",
+            tenantName: memorial.tenantName || "Amuley Default",
+            inviteEmail: inviteEmail
+          };
+          
+          const existingInvitesStr = localStorage.getItem("amuley_user_invites");
+          const existingInvites = existingInvitesStr ? JSON.parse(existingInvitesStr) : [];
+          localStorage.setItem("amuley_user_invites", JSON.stringify([...existingInvites, invite]));
+          
+          const existingUsersStr = localStorage.getItem("amuley_users");
+          const existingUsers = existingUsersStr ? JSON.parse(existingUsersStr) : [];
+          if (!existingUsers.some((u: any) => u.email === inviteEmail)) {
+            const newUser = {
+              id: `u-${Date.now()}`,
+              name: "Administrador Familiar",
+              email: inviteEmail,
+              role: "FAMILIA",
+              tenantName: memorial.tenantName || "Amuley Default",
+              branchName: "Global",
+              createdAt: new Date().toISOString().substring(0, 10),
+              status: "Pendiente Confirmación"
+            };
+            localStorage.setItem("amuley_users", JSON.stringify([...existingUsers, newUser]));
+            window.dispatchEvent(new Event("local-storage-update"));
+          }
+        }
+        
         setInviteSuccessMsg({ type: "success", text: `Magic Link enviado a ${inviteEmail}` });
         setInviteEmail("");
         setInviteMemorialId("");
@@ -134,6 +172,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const [newSpecies, setNewSpecies] = useState("");
   const [newBreed, setNewBreed] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [newMemorialTenant, setNewMemorialTenant] = useState("");
 
   const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Amuley Legacy");
   const [emailGreeting, setEmailGreeting] = useState("Estimada familia Valenzuela,");
@@ -292,6 +331,8 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
 
     setTimeout(() => {
       const slugified = newName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+      const selectedTenantName = newMemorialTenant || (tenants.length > 0 ? tenants[0].name : "Amuley Default");
+      
       const newMemorial = {
         id: `m-${Date.now()}`,
         slug: slugified,
@@ -302,8 +343,8 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         mainImage: "https://picsum.photos/id/93/2000/1200",
         coverImage: "https://picsum.photos/id/93/2000/1200",
         isPrivate: false,
-        tenantName: "Amuley Default",
-        createdBy: "cjxd123@gmail.com"
+        tenantName: selectedTenantName,
+        createdBy: "cjxd123@gmail.com" // Opcionalmente sessionEmail si existe
       };
 
       const savedMems = localStorage.getItem("amuley_memorials");
@@ -313,11 +354,48 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
 
       setGlobalMemorials(prev => [...prev, newMemorial]);
 
+      // Guardar el usuario familiar en la tabla de usuarios local
+      const newUser = {
+        id: `u-${Date.now()}`,
+        name: "Administrador Familiar",
+        email: newFamilyEmail,
+        role: "FAMILIA",
+        tenantName: selectedTenantName,
+        branchName: "Global",
+        createdAt: new Date().toISOString().substring(0, 10),
+        status: "Pendiente Magic Link"
+      };
+      const savedUsers = localStorage.getItem("amuley_users");
+      const allUsers = savedUsers ? JSON.parse(savedUsers) : [];
+      if (!allUsers.some((u: any) => u.email === newFamilyEmail)) {
+        const updatedUsers = [...allUsers, newUser];
+        localStorage.setItem("amuley_users", JSON.stringify(updatedUsers));
+      }
+
+      // Guardar invitación local
+      const invite = {
+        id: newMemorial.id,
+        slug: newMemorial.slug,
+        name: newMemorial.name,
+        birthDate: newMemorial.birthDate,
+        deathDate: newMemorial.deathDate,
+        mainImage: newMemorial.mainImage,
+        invitedBy: selectedTenantName,
+        invitedDate: new Date().toISOString(),
+        relation: "Administrador Familiar",
+        tenantName: selectedTenantName,
+        inviteEmail: newFamilyEmail
+      };
+      const existingInvitesStr = localStorage.getItem("amuley_user_invites");
+      const existingInvites = existingInvitesStr ? JSON.parse(existingInvitesStr) : [];
+      localStorage.setItem("amuley_user_invites", JSON.stringify([...existingInvites, invite]));
+
       setIsCreating(false);
       setNewName("");
       setNewBirth("");
       setNewDeath("");
       setNewFamilyEmail("");
+      setNewMemorialTenant("");
 
       confetti({
         particleCount: 25,
@@ -919,6 +997,21 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
 
             <form onSubmit={handleCreateMemorial} className="grid md:grid-cols-2 gap-4">
               <div className="space-y-4">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Funeraria Responsable</label>
+                  <select 
+                    value={newMemorialTenant}
+                    onChange={(e) => setNewMemorialTenant(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base mb-4"
+                  >
+                    <option value="">Selecciona una funeraria...</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Tipo de Memorial</label>
