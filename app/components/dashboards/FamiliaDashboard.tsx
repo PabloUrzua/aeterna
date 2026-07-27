@@ -796,6 +796,8 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                 </div>
               </div>
             </div>
+          </section>
+
           {/* Mejora a Premium (B2C) */}
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left mt-6 bg-gradient-to-r from-[var(--tenant-primary)]/5 to-transparent">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">

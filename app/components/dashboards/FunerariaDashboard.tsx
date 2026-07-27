@@ -956,6 +956,8 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                 </form>
               </div>
             </div>
+          </section>
+          
           {/* Facturación y Límites (B2B) */}
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left mt-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
