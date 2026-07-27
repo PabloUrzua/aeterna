@@ -25,6 +25,7 @@ import {
 import { QRCodeCanvas } from "qrcode.react";
 import { useBranding } from "../../context/BrandingContext";
 import confetti from "canvas-confetti";
+import { createClient } from "@/utils/supabase/client";
 
 export default function FamiliaDashboard({ switchRole, originalRole }: { switchRole?: (role: string) => void, originalRole?: string | null }) {
   const router = useRouter();
@@ -88,32 +89,50 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
   const [bioText, setBioText] = useState("");
   const [bioSuccess, setBioSuccess] = useState(false);
 
-  const handleSendInvite = (e: React.FormEvent) => {
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteName.trim() || !inviteEmail.trim()) return;
 
-    const newMember = {
-      id: `f_${Date.now()}`,
-      name: inviteName,
-      role: inviteRole,
-      relation: inviteRelation,
-      email: inviteEmail
-    };
+    try {
+      const supabase = createClient();
+      
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: inviteEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
 
-    setFamilyMembers(prev => [...prev, newMember]);
-    setInviteName("");
-    setInviteEmail("");
-    setShowInviteSuccess(true);
-    
-    confetti({
-      particleCount: 15,
-      spread: 20,
-      colors: [config.primaryColor]
-    });
+      if (authError) {
+        alert(`Error enviando invitación: ${authError.message}`);
+        return;
+      }
 
-    setTimeout(() => {
-      setShowInviteSuccess(false);
-    }, 3000);
+      const newMember = {
+        id: `f_${Date.now()}`,
+        name: inviteName,
+        role: inviteRole,
+        relation: inviteRelation,
+        email: inviteEmail
+      };
+
+      setFamilyMembers(prev => [...prev, newMember]);
+      setInviteName("");
+      setInviteEmail("");
+      setShowInviteSuccess(true);
+      
+      confetti({
+        particleCount: 15,
+        spread: 20,
+        colors: [config.primaryColor]
+      });
+
+      setTimeout(() => {
+        setShowInviteSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      alert(`Error inesperado: ${err.message}`);
+    }
   };
 
   const handleUploadMemory = (e: React.FormEvent) => {

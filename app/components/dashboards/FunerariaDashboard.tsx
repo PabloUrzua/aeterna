@@ -183,13 +183,28 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
     }
   };
 
-  const handleCreateMemorial = (e: React.FormEvent) => {
+  const handleCreateMemorial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newFamilyEmail.trim()) return;
 
     setIsCreating(true);
 
-    setTimeout(() => {
+    try {
+      const supabase = createClient();
+      
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: newFamilyEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+
+      if (authError) {
+        alert(`Error enviando invitación: ${authError.message}`);
+        setIsCreating(false);
+        return;
+      }
+
       const slugified = newName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
       const newMemorial = {
         id: `m-${Date.now()}`,
@@ -212,6 +227,23 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
 
       setCreatedMemorials(prev => [...prev, newMemorial]);
 
+      // Guardar el usuario familiar en la tabla de usuarios local
+      const newUser = {
+        id: `u-${Date.now()}`,
+        name: "Administrador Familiar",
+        email: newFamilyEmail,
+        role: "FAMILIA",
+        tenantName: config.name,
+        branchName: "Global",
+        createdAt: new Date().toISOString().substring(0, 10),
+        status: "Pendiente Magic Link"
+      };
+      const savedUsers = localStorage.getItem("amuley_users");
+      const allUsers = savedUsers ? JSON.parse(savedUsers) : [];
+      const updatedUsers = [...allUsers, newUser];
+      localStorage.setItem("amuley_users", JSON.stringify(updatedUsers));
+      setTenantUsers(updatedUsers.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
+
       setIsCreating(false);
       setNewName("");
       setNewBirth("");
@@ -224,7 +256,10 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
         colors: [config.primaryColor, "#FAF7F2"]
       });
       alert(`Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`);
-    }, 1200);
+    } catch (err: any) {
+      alert(`Error inesperado: ${err.message}`);
+      setIsCreating(false);
+    }
   };
 
   return (
