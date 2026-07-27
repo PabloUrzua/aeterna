@@ -9,12 +9,12 @@ export async function proxy(request: NextRequest) {
   const isProtectedPath = path.startsWith('/api') || path === '/login' || path === '/register' || path === '/solicitar-memorial';
 
   if (isProtectedPath) {
-    const ip = request.headers.get('x-real-ip') || 
-               request.headers.get('x-forwarded-for') || 
-               '127.0.0.1';
-               
-    const MAX_REQUESTS = 50; 
-    const WINDOW_MS = 60 * 1000; 
+    const ip = request.headers.get('x-real-ip') ||
+      request.headers.get('x-forwarded-for') ||
+      '127.0.0.1';
+
+    const MAX_REQUESTS = 50;
+    const WINDOW_MS = 60 * 1000;
     const currentTime = Date.now();
 
     if (!rateLimitMap.has(ip)) {
@@ -31,16 +31,16 @@ export async function proxy(request: NextRequest) {
         data.count++;
         if (data.count > MAX_REQUESTS) {
           return new NextResponse(
-            JSON.stringify({ 
-              error: 'Too Many Requests', 
-              message: 'Has realizado demasiadas peticiones. Por favor, espera un minuto.' 
+            JSON.stringify({
+              error: 'Too Many Requests',
+              message: 'Has realizado demasiadas peticiones. Por favor, espera un minuto.'
             }),
-            { 
-              status: 429, 
-              headers: { 
+            {
+              status: 429,
+              headers: {
                 'Content-Type': 'application/json',
                 'Retry-After': Math.ceil((data.resetTime - currentTime) / 1000).toString()
-              } 
+              }
             }
           );
         }

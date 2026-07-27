@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Key, Mail, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -19,6 +19,27 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get("error");
+      const errorDescription = urlParams.get("error_description");
+
+      if (error) {
+        let displayError = errorDescription ? decodeURIComponent(errorDescription.replace(/\+/g, " ")) : error;
+        
+        if (displayError.includes("Email link is invalid or has expired")) {
+          displayError = "El enlace de acceso es inválido o ha expirado. Por favor, solicita uno nuevo o ingresa con tus credenciales.";
+        }
+        
+        setErrorMsg(displayError);
+        
+        // Clean up the URL to remove the messy error parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

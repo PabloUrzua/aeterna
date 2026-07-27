@@ -64,6 +64,9 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const [newBirth, setNewBirth] = useState("");
   const [newDeath, setNewDeath] = useState("");
   const [newFamilyEmail, setNewFamilyEmail] = useState("");
+  const [newType, setNewType] = useState<"persona" | "mascota">("persona");
+  const [newSpecies, setNewSpecies] = useState("");
+  const [newBreed, setNewBreed] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   // Plantilla de Email (Magic Link)
@@ -651,16 +654,31 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
 
             <form onSubmit={handleCreateMemorial} className="grid md:grid-cols-2 gap-4">
               <div className="space-y-4">
-                <div>
-                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Completo del Fallecido</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Roberto García Martínez"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    required
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Tipo de Memorial</label>
+                    <select 
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value as "persona" | "mascota")}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                    >
+                      <option value="persona">Persona</option>
+                      <option value="mascota">Mascota</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">
+                      {newType === "persona" ? "Nombre del Fallecido" : "Nombre de la Mascota"}
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder={newType === "persona" ? "Ej. Roberto García" : "Ej. Toby"}
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -683,6 +701,31 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     />
                   </div>
                 </div>
+
+                {newType === "mascota" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Especie</label>
+                      <input 
+                        type="text"
+                        placeholder="Ej. Perro, Gato"
+                        value={newSpecies}
+                        onChange={(e) => setNewSpecies(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Raza (Opcional)</label>
+                      <input 
+                        type="text"
+                        placeholder="Ej. Pastor Alemán"
+                        value={newBreed}
+                        onChange={(e) => setNewBreed(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 flex flex-col justify-between">
@@ -911,6 +954,59 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     Registrar Sucursal
                   </button>
                 </form>
+              </div>
+            </div>
+          {/* Facturación y Límites (B2B) */}
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left mt-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div>
+                <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
+                  <ShieldAlert size={18} className="text-[var(--tenant-primary)]" />
+                  Facturación y Límites de Consumo
+                </h2>
+                <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed text-sm">
+                  Revisa tu plan actual, límites de creación de memoriales y opciones para actualizar tu suscripción B2B.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold uppercase tracking-widest border border-green-200 dark:border-green-800/50">
+                Plan Profesional
+              </span>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs md:text-sm font-bold text-neutral-800 dark:text-neutral-200">Memoriales Creados (Este mes)</span>
+                    <span className="text-xs font-mono text-neutral-500">45 / 50</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--tenant-primary)] w-[90%] rounded-full"></div>
+                  </div>
+                  <span className="text-[10px] text-red-500 font-semibold">Te acercas al límite de tu plan.</span>
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs md:text-sm font-bold text-neutral-800 dark:text-neutral-200">Almacenamiento (White Label)</span>
+                    <span className="text-xs font-mono text-neutral-500">12 GB / 50 GB</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--tenant-primary)] w-[24%] rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 rounded-xl border border-[var(--tenant-primary)]/30 bg-[var(--tenant-primary)]/5 flex flex-col justify-between">
+                <div>
+                  <span className="text-xs md:text-sm uppercase tracking-widest text-[var(--tenant-primary)] font-bold block mb-2">Mejora tu suscripción</span>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 font-light mb-4">
+                    Al pasar al plan <strong>Empresarial Ilimitado</strong> podrás crear memoriales sin restricciones, obtener placas físicas con descuento y multi-sucursales ilimitadas.
+                  </p>
+                </div>
+                <button className="w-full py-2.5 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold text-xs md:text-sm uppercase tracking-widest transition-colors">
+                  Contactar a Ventas
+                </button>
               </div>
             </div>
           </section>

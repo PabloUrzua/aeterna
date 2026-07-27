@@ -31,6 +31,7 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
   const { config } = useBranding();
   
   // Miembros de la familia
+  const [isPet, setIsPet] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([
     { id: "f1", name: "Marta Valenzuela", role: "Administrador", relation: "Hija", email: "marta@correo.com" },
     { id: "f2", name: "Alejandro Valenzuela Hijo", role: "Administrador", relation: "Hijo", email: "alejandro.hijo@correo.com" },
@@ -82,6 +83,10 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
   // Ajustes de privacidad
   const [privacyLevel, setPrivacyLevel] = useState("public"); // public, private, password
   const [privacySuccess, setPrivacySuccess] = useState(false);
+
+  // Biografía
+  const [bioText, setBioText] = useState("");
+  const [bioSuccess, setBioSuccess] = useState(false);
 
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,8 +215,13 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             </div>
             <div>
               <span className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold block">Memorial Administrado</span>
-              <h4 className="font-serif font-bold text-neutral-800 dark:text-neutral-100 text-sm md:text-base mt-1">Alejandro Valenzuela</h4>
               <span className="text-xs md:text-sm text-neutral-400 font-mono">1948 - 2026</span>
+              <button 
+                onClick={() => setIsPet(!isPet)} 
+                className="mt-3 px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 hover:text-[var(--tenant-primary)] transition-colors w-full border border-transparent hover:border-[var(--tenant-primary)]/30"
+              >
+                {isPet ? "🐾 Modo Mascota Activo" : "👤 Modo Persona Activo"}
+              </button>
             </div>
           </div>
 
@@ -271,6 +281,54 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
         {/* Contenido Principal */}
         <main className="lg:col-span-3 space-y-8">
           
+          {/* Editar Biografía Principal */}
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+            <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+              <FileText size={18} className="text-[var(--tenant-primary)]" />
+              Biografía Principal
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+              Escribe la historia de vida, semblanza o biografía principal que se mostrará de forma destacada en el perfil público del memorial.
+            </p>
+
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                setBioSuccess(true);
+                confetti({
+                  particleCount: 20,
+                  spread: 30,
+                  colors: [config.primaryColor, "#FFFFFF"]
+                });
+                setTimeout(() => setBioSuccess(false), 3000);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <textarea 
+                  rows={8} 
+                  placeholder="Nacido en Valparaíso, dedicó su vida a la educación y a su familia..."
+                  value={bioText}
+                  onChange={(e) => setBioText(e.target.value)}
+                  className="w-full bg-white/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none text-sm md:text-base resize-none leading-relaxed"
+                ></textarea>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  type="submit"
+                  className="px-6 py-2.5 rounded-full bg-tenant-btn-main text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-xs"
+                >
+                  Guardar Biografía
+                </button>
+                {bioSuccess && (
+                  <span className="text-xs md:text-sm text-green-500 font-semibold flex items-center gap-1">
+                    <CheckCircle size={11} /> Biografía actualizada correctamente
+                  </span>
+                )}
+              </div>
+            </form>
+          </section>
+
           {/* Subir Recuerdos desde el Panel */}
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
             <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
@@ -392,11 +450,21 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                   onChange={(e) => setInviteRelation(e.target.value)}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 outline-none text-sm md:text-base"
                 >
-                  <option value="Hijo/a">Hijo/a</option>
-                  <option value="Cónyuge">Cónyuge</option>
-                  <option value="Hermano/a">Hermano/a</option>
-                  <option value="Nieto/a">Nieto/a</option>
-                  <option value="Amigo/a">Amigo/a</option>
+                  {isPet ? (
+                    <>
+                      <option value="Dueño/a">Dueño/a</option>
+                      <option value="Familia">Familia</option>
+                      <option value="Veterinario/a">Veterinario/a</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Hijo/a">Hijo/a</option>
+                      <option value="Cónyuge">Cónyuge</option>
+                      <option value="Hermano/a">Hermano/a</option>
+                      <option value="Nieto/a">Nieto/a</option>
+                      <option value="Amigo/a">Amigo/a</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -501,13 +569,16 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             </div>
           </section>
 
-          {/* Gestión del Árbol Genealógico */}
+          {/* Gestión del Árbol Genealógico / Huellas */}
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
             <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
-              🌳 Gestión del Árbol Genealógico
+              {isPet ? "🐾 Álbum de Huellas y Amigos" : "🌳 Gestión del Árbol Genealógico"}
             </h2>
             <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
-              Agrega familiares directos y define su parentesco para que se muestren en la pestaña gráfica de Árbol Genealógico del memorial de Alejandro.
+              {isPet 
+                ? "Agrega a los compañeros de juegos y familiares humanos de tu mascota para construir su red de amigos."
+                : "Agrega familiares directos y define su parentesco para que se muestren en la pestaña gráfica de Árbol Genealógico del memorial de Alejandro."
+              }
             </p>
 
             <div className="grid md:grid-cols-3 gap-4 md:p-6">
@@ -555,11 +626,22 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                       onChange={(e) => setNodeRelation(e.target.value)}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-1.5 outline-none text-sm md:text-base"
                     >
-                      <option value="Padre">Padre</option>
-                      <option value="Madre">Madre</option>
-                      <option value="Cónyuge">Cónyuge</option>
-                      <option value="Hijo/a">Hijo/a</option>
-                      <option value="Nieto/a">Nieto/a</option>
+                      {isPet ? (
+                        <>
+                          <option value="Padre/Madre Humano">Padre/Madre Humano</option>
+                          <option value="Hermano/a Peludo">Hermano/a Peludo</option>
+                          <option value="Compañero/a de juegos">Compañero/a de juegos</option>
+                          <option value="Veterinario/a">Veterinario/a</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Padre">Padre</option>
+                          <option value="Madre">Madre</option>
+                          <option value="Cónyuge">Cónyuge</option>
+                          <option value="Hijo/a">Hijo/a</option>
+                          <option value="Nieto/a">Nieto/a</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -610,10 +692,12 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
           {/* Gestión de Hitos / Línea de Vida */}
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
             <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
-              ⏳ Creador de Línea de Vida (Hitos)
+              ⏳ {isPet ? "Mejores Momentos (Línea de Vida)" : "Creador de Línea de Vida (Hitos)"}
             </h2>
             <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
-              Agrega hitos históricos clave en la vida del ser querido. Se mostrarán ordenados cronológicamente en el memorial público.
+              {isPet
+                ? "Agrega los momentos más divertidos y entrañables en la vida de tu mascota. Se mostrarán cronológicamente."
+                : "Agrega hitos históricos clave en la vida del ser querido. Se mostrarán ordenados cronológicamente en el memorial público."}
             </p>
 
             <div className="grid md:grid-cols-3 gap-4 md:p-6">
@@ -710,6 +794,41 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          {/* Mejora a Premium (B2C) */}
+          <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left mt-6 bg-gradient-to-r from-[var(--tenant-primary)]/5 to-transparent">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1">
+                <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2 text-[var(--tenant-primary)]">
+                  <Sparkles size={20} />
+                  Desbloquea el Memorial Premium
+                </h2>
+                <p className="text-neutral-600 dark:text-neutral-300 font-light leading-relaxed mb-4">
+                  Haz que este espacio sea verdaderamente único. Al cambiar al plan Premium obtienes:
+                </p>
+                <ul className="space-y-2 text-sm text-neutral-500 dark:text-neutral-400 mb-6">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-[var(--tenant-primary)]" />
+                    <strong>Dominio Personalizado</strong> (ej: www.alejandro-valenzuela.cl)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-[var(--tenant-primary)]" />
+                    <strong>Subida ilimitada</strong> de fotos y videos en alta definición
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-[var(--tenant-primary)]" />
+                    <strong>Libro de condolencias físico</strong> impreso y enviado a domicilio
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-xl text-center w-full md:w-72">
+                <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 block mb-2">Pago Único</span>
+                <span className="font-serif text-4xl font-bold text-neutral-800 dark:text-neutral-100 block mb-4">$45.000<span className="text-sm font-sans text-neutral-400 font-normal"> CLP</span></span>
+                <button className="w-full py-3 rounded-full bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold text-xs md:text-sm uppercase tracking-widest transition-transform hover:scale-105 shadow-md shadow-[var(--tenant-primary)]/30">
+                  Mejorar a Premium
+                </button>
               </div>
             </div>
           </section>
