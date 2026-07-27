@@ -59,12 +59,55 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       }
     }
     
-    // Load users for this tenant
-    const savedUsersStr = localStorage.getItem("amuley_users");
-    if (savedUsersStr) {
-      const allUsers = JSON.parse(savedUsersStr);
-      setTenantUsers(allUsers.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
-    }
+    // Función para recargar usuarios desde localStorage
+    const reloadUsers = () => {
+      const savedUsersStr = localStorage.getItem("amuley_users");
+      if (savedUsersStr) {
+        const allUsers = JSON.parse(savedUsersStr);
+        setTenantUsers(allUsers.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
+      }
+    };
+
+    reloadUsers();
+
+    // Sincronizar estado en "Tiempo Real" si otra pestaña actualiza localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "amuley_users") reloadUsers();
+    };
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("local-storage-update", reloadUsers);
+
+    // Verificar sesión activa de Supabase para cambiar estado a ACTIVO
+    const checkAuthAndUpdateStatus = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        const savedUsersStr = localStorage.getItem("amuley_users");
+        if (savedUsersStr) {
+          let allUsers = JSON.parse(savedUsersStr);
+          let changed = false;
+          allUsers = allUsers.map((u: any) => {
+            if (u.email === session.user.email && u.status !== "ACTIVO") {
+              changed = true;
+              return { ...u, status: "ACTIVO" };
+            }
+            return u;
+          });
+          if (changed) {
+            localStorage.setItem("amuley_users", JSON.stringify(allUsers));
+            window.dispatchEvent(new Event("local-storage-update"));
+          }
+        }
+      }
+    };
+    
+    checkAuthAndUpdateStatus();
+
+    // Cleanup listeners
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("local-storage-update", reloadUsers);
+    };
   }, [config.name]);
 
   const [branches, setBranches] = useState([

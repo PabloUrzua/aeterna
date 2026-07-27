@@ -18,7 +18,8 @@ import {
   FileText,
   ExternalLink,
   Plus,
-  UserPlus
+  UserPlus,
+  Mail
 } from "lucide-react";
 import {
   AreaChart,
@@ -38,7 +39,44 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const { config } = useBranding();
 
   const [globalMemorials, setGlobalMemorials] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "funerarias" | "sucursales" | "usuarios" | "memoriales">("overview");
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteMemorialId, setInviteMemorialId] = useState("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState<{type: "success"|"error", text: string} | null>(null);
+
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim() || !inviteMemorialId) return;
+
+    setIsSendingInvite(true);
+    setInviteSuccessMsg(null);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: inviteEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+
+      if (error) {
+        setInviteSuccessMsg({ type: "error", text: error.message });
+      } else {
+        setInviteSuccessMsg({ type: "success", text: `Magic Link enviado a ${inviteEmail}` });
+        setInviteEmail("");
+        setInviteMemorialId("");
+        confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+      }
+    } catch (err: any) {
+      setInviteSuccessMsg({ type: "error", text: err.message || "Error inesperado" });
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<"overview" | "funerarias" | "sucursales" | "usuarios" | "memoriales" | "invitaciones">("overview");
   const [tenants, setTenants] = useState<any[]>([]);
   
   // Calculate dynamic stats
@@ -429,6 +467,18 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
             >
               <FileText size={16} /> Memoriales Digitales
             </button>
+
+            <button 
+              onClick={() => setActiveTab("invitaciones")}
+              className={`w-full text-left px-3 py-2.5 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "invitaciones" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Mail size={16} /> Invitaciones
+            </button>
+
           </div>
         </div>
 
@@ -731,6 +781,73 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           )}
 
           {/* Directorio Global de Memoriales (Todos los clientes de todas las funerarias) */}
+
+          {/* Nueva Sección: Invitaciones */}
+          {activeTab === "invitaciones" && (
+          <div className="space-y-6 md:space-y-8">
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+              <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                <Mail size={18} className="text-[var(--tenant-primary)]" />
+                Invitar a un Miembro de la Familia
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                Envía un Magic Link para que un familiar pueda tomar el control o colaborar en un memorial específico.
+              </p>
+              
+              <form onSubmit={handleSendInvitation} className="grid md:grid-cols-3 gap-6 items-end">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo a Invitar</label>
+                  <input 
+                    type="email" 
+                    placeholder="familiar@correo.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Memorial a Vincular</label>
+                  <select 
+                    value={inviteMemorialId}
+                    onChange={(e) => setInviteMemorialId(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                  >
+                    <option value="">Selecciona un memorial...</option>
+                    {globalMemorials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} - {m.tenantName || "Funeraria"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <button 
+                    type="submit"
+                    disabled={isSendingInvite}
+                    className="w-full py-2.5 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold tracking-widest transition-all uppercase text-sm disabled:opacity-50"
+                  >
+                    {isSendingInvite ? "Enviando..." : "Enviar Invitación"}
+                  </button>
+                </div>
+              </form>
+
+              {inviteSuccessMsg && (
+                <div className={`mt-4 p-4 rounded-xl text-sm font-semibold ${
+                  inviteSuccessMsg.type === "success" 
+                    ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400" 
+                    : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                }`}>
+                  {inviteSuccessMsg.text}
+                </div>
+              )}
+            </section>
+          </div>
+          )}
+
           {activeTab === "memoriales" && (
           <div className="space-y-6 md:space-y-8">
           <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
