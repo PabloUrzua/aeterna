@@ -12,6 +12,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [activeSegment, setActiveSegment] = useState<"familias" | "empresas">("familias");
   const [activeFamilyTab, setActiveFamilyTab] = useState<"personas" | "mascotas">("personas");
+  const [activeNav, setActiveNav] = useState<"inicio" | "familias" | "empresas" | "nosotros">("inicio");
 
   const handleDemoClick = () => {
     router.push("/memorial/alejandro-valenzuela");
@@ -33,14 +34,14 @@ export default function LandingPage() {
       <div className="relative z-10 min-h-screen font-sans text-[#111111] overflow-x-hidden flex flex-col">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#FCFBFA]/90 backdrop-blur-sm border-b border-[#967B62]/30 px-4 md:px-6 py-3 md:py-5 animate-fade-in-up">
+      <header className="fixed w-full top-0 z-50 bg-[#FCFBFA]/90 backdrop-blur-sm border-b border-[#967B62]/30 px-4 md:px-6 py-3 md:py-5 animate-fade-in-up">
         <div className="max-w-6xl mx-auto flex justify-between items-center gap-2">
           <Link href="/" className="flex items-center gap-2 md:gap-3 group shrink-0">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-[#967B62]/40 shrink-0 drop-shadow-md">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden shrink-0 shadow-md border-2 border-[#967B62]/40 [transform:translateZ(0)]">
               <img 
                 src="/logo.png" 
                 alt="Amuley Logo" 
-                className="w-full h-full object-cover scale-[1.5] group-hover:scale-[1.65] transition-transform duration-500 ease-in-out"
+                className="w-full h-full object-cover scale-[1.6] group-hover:scale-[1.65] transition-transform duration-500 ease-in-out"
               />
             </div>
             <span className="font-serif text-sm sm:text-base md:text-xl tracking-[0.1em] md:tracking-[0.3em] font-bold uppercase text-[#967B62]">
@@ -49,18 +50,52 @@ export default function LandingPage() {
           </Link>
 
           {/* Navigation Middle */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold tracking-widest uppercase text-[#55504C]">
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#55504C]">
             <button 
-              onClick={() => setActiveSegment("familias")}
-              className={`hover:text-[#967B62] transition-colors ${activeSegment === "familias" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
+              onClick={() => {
+                setActiveNav("inicio");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`hover:text-[#967B62] transition-colors ${activeNav === "inicio" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
             >
-              Para Familias
+              INICIO
             </button>
             <button 
-              onClick={() => setActiveSegment("empresas")}
-              className={`hover:text-[#967B62] transition-colors ${activeSegment === "empresas" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
+              onClick={() => {
+                setActiveNav("familias");
+                setActiveSegment("familias");
+                const el = document.getElementById("pricing");
+                if (el) {
+                  const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                  window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+              }}
+              className={`hover:text-[#967B62] transition-colors ${activeNav === "familias" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
             >
-              Para Empresas
+              PLANES FAMILIARES
+            </button>
+            <button 
+              onClick={() => {
+                setActiveNav("empresas");
+                setActiveSegment("empresas");
+                const el = document.getElementById("pricing");
+                if (el) {
+                  const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                  window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+              }}
+              className={`hover:text-[#967B62] transition-colors ${activeNav === "empresas" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
+            >
+              PLANES EMPRESAS
+            </button>
+            <button 
+              onClick={() => {
+                setActiveNav("nosotros");
+                router.push("/nosotros");
+              }}
+              className={`hover:text-[#967B62] transition-colors ${activeNav === "nosotros" ? "text-[#967B62] border-b-2 border-[#967B62] pb-1" : ""}`}
+            >
+              NOSOTROS
             </button>
           </nav>
 
@@ -72,7 +107,7 @@ export default function LandingPage() {
               <LogIn size={16} /> Ingresar
             </Link>
             <Link
-              href="/login"
+              href="/solicitar-memorial"
               className="px-2 py-1.5 sm:px-3 sm:py-2 md:px-5 md:py-2.5 rounded-sm bg-[#967B62]/10 border border-[#967B62] hover:bg-[#967B62] hover:text-[#FCFBFA] text-[#967B62] text-[10px] sm:text-xs md:text-sm uppercase tracking-widest font-bold transition-all shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-1.5"
             >
               <Plus size={16} /> Crear
@@ -83,7 +118,7 @@ export default function LandingPage() {
 
       <main>
         {/* Hero Section */}
-        <section className="max-w-4xl mx-auto px-6 pt-24 pb-16 text-center space-y-10 relative">
+        <section className="max-w-4xl mx-auto px-6 pt-32 pb-24 min-h-screen flex flex-col justify-center items-center text-center space-y-10 relative">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#967B62]/30 bg-white/70 backdrop-blur-sm text-sm font-semibold text-[#967B62] shadow-sm animate-fade-in-up delay-100 uppercase tracking-widest">
             {activeSegment === "familias" ? (
               <><Leaf size={14} /> El santuario digital de tu familia</>
@@ -111,12 +146,18 @@ export default function LandingPage() {
             >
               Ver Demo <Eye size={16} />
             </button>
-            <a
-              href="#pricing"
+            <button
+              onClick={() => {
+                const el = document.getElementById("pricing");
+                if (el) {
+                  const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                  window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+              }}
               className="w-full sm:w-auto px-8 py-3.5 rounded-md bg-transparent hover:bg-[#967B62]/10 border border-[#967B62] text-[#967B62] text-sm md:text-base uppercase font-bold tracking-widest transition-all flex items-center justify-center gap-2 hover:-translate-y-1"
             >
               Ver Planes <ArrowRight size={16} />
-            </a>
+            </button>
           </div>
         </section>
 

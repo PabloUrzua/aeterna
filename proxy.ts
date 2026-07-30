@@ -8,7 +8,8 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isProtectedPath = path.startsWith('/api') || path === '/login' || path === '/register' || path === '/solicitar-memorial';
 
-  if (isProtectedPath) {
+  // Disable rate limiting in development mode
+  if (process.env.NODE_ENV !== 'development' && isProtectedPath) {
     const ip = request.headers.get('x-real-ip') ||
       request.headers.get('x-forwarded-for') ||
       '127.0.0.1';

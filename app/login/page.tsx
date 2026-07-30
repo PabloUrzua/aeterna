@@ -119,6 +119,8 @@ export default function LoginPage() {
           
           if (data.user.email === "cjxd123@gmail.com") {
              userRole = "ADMIN";
+          } else if (data.user.email === "pccleanltda@gmail.com") {
+             userRole = "FUNERARIA";
           } else {
              // Revisar si fue creado por el superadmin (FUNERARIA) o por funeraria (FAMILIA)
              const savedUsersStr = localStorage.getItem("amuley_users");
@@ -166,11 +168,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-stone-200/50 p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-8 relative z-10 transition-all duration-500 hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)]">
         <div className="space-y-3 text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-3 group mb-2">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-[#967B62]/40 shrink-0 group-hover:scale-110 transition-transform duration-500 ease-out shadow-md mx-auto">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden shrink-0 shadow-md mx-auto border-2 border-[#967B62]/40 [transform:translateZ(0)]">
               <img 
                 src="/logo.png" 
                 alt="Amuley Logo" 
-                className="w-full h-full object-cover scale-[1.5]"
+                className="w-full h-full object-cover scale-[1.6] group-hover:scale-[1.65] transition-transform duration-500 ease-out"
               />
             </div>
             <span className="font-serif text-lg tracking-[0.25em] font-bold uppercase text-[#111111]">

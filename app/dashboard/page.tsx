@@ -21,8 +21,29 @@ export default function MasterDashboard() {
     }
     try {
       const session = JSON.parse(sessionStr);
-      setRole(session.role || "USER");
-      setOriginalRole(session.role || "USER");
+      let sessionRole = session.role || "USER";
+      
+      // Update from pseudo-DB in case SuperAdmin changed their role
+      const savedUsersStr = localStorage.getItem("amuley_users");
+      if (savedUsersStr) {
+        const savedUsers = JSON.parse(savedUsersStr);
+        const foundUser = savedUsers.find((u: any) => u.email.toLowerCase() === session.email.toLowerCase());
+        if (foundUser && foundUser.role) {
+          sessionRole = foundUser.role;
+          // Update stale session
+          session.role = sessionRole;
+          localStorage.setItem("user_session", JSON.stringify(session));
+        }
+      }
+
+      if (session.email?.toLowerCase() === "pccleanltda@gmail.com") {
+        sessionRole = "FUNERARIA";
+        session.role = sessionRole;
+        localStorage.setItem("user_session", JSON.stringify(session));
+      }
+
+      setRole(sessionRole);
+      setOriginalRole(sessionRole);
     } catch (e) {
       router.push("/login");
     } finally {
@@ -44,8 +65,7 @@ export default function MasterDashboard() {
     case "FUNERARIA":
       return <FunerariaDashboard switchRole={setRole} originalRole={originalRole} />;
     case "FAMILIA":
-      return <FamiliaDashboard switchRole={setRole} originalRole={originalRole} />;
     default:
-      return <UserDashboard />;
+      return <FamiliaDashboard switchRole={setRole} originalRole={originalRole} />;
   }
 }

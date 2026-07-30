@@ -19,7 +19,10 @@ import {
   ExternalLink,
   Plus,
   UserPlus,
-  Mail
+  Mail,
+  Receipt,
+  Menu,
+  X
 } from "lucide-react";
 import {
   AreaChart,
@@ -39,6 +42,56 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   const { config } = useBranding();
 
   const [globalMemorials, setGlobalMemorials] = useState<any[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const [boletas, setBoletas] = useState<any[]>([]);
+  const [newBoletaAmount, setNewBoletaAmount] = useState("");
+  const [newBoletaTenant, setNewBoletaTenant] = useState("");
+  const [newBoletaConcept, setNewBoletaConcept] = useState("");
+  const [isCreatingBoleta, setIsCreatingBoleta] = useState(false);
+  const [boletaCreateMsg, setBoletaCreateMsg] = useState<{type: "success"|"error", text: string} | null>(null);
+
+  const handleCreateBoleta = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBoletaTenant || !newBoletaAmount || !newBoletaConcept) return;
+
+    setIsCreatingBoleta(true);
+    setBoletaCreateMsg(null);
+
+    setTimeout(() => {
+      const newBoleta = {
+        id: `bol-${Date.now()}`,
+        tenantName: newBoletaTenant,
+        amount: newBoletaAmount,
+        concept: newBoletaConcept,
+        status: "Activa", // Activa, Por Confirmar, Confirmada
+        date: new Date().toISOString().substring(0, 10),
+      };
+
+      const savedBoletas = localStorage.getItem("amuley_boletas");
+      const allBoletas = savedBoletas ? JSON.parse(savedBoletas) : [];
+      const updated = [...allBoletas, newBoleta];
+      
+      localStorage.setItem("amuley_boletas", JSON.stringify(updated));
+      setBoletas(updated);
+
+      setNewBoletaAmount("");
+      setNewBoletaConcept("");
+      setNewBoletaTenant("");
+      setBoletaCreateMsg({ type: "success", text: "Boleta creada exitosamente." });
+      setIsCreatingBoleta(false);
+      
+      confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+      setTimeout(() => setBoletaCreateMsg(null), 3000);
+    }, 600);
+  };
+
+  const handleChangeBoletaStatus = (id: string, newStatus: string) => {
+    const updated = boletas.map(b => b.id === id ? { ...b, status: newStatus } : b);
+    setBoletas(updated);
+    localStorage.setItem("amuley_boletas", JSON.stringify(updated));
+  };
+
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteMemorialId, setInviteMemorialId] = useState("");
@@ -114,7 +167,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
     }
   };
 
-  const [activeTab, setActiveTab] = useState<"overview" | "funerarias" | "sucursales" | "usuarios" | "memoriales" | "invitaciones">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "funerarias" | "sucursales" | "usuarios" | "memoriales" | "invitaciones" | "boletas">("overview");
   const [tenants, setTenants] = useState<any[]>([]);
   
   // Calculate dynamic stats
@@ -307,7 +360,10 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         date: new Date().toISOString().substring(0, 10)
       };
 
-      const savedTenants = localStorage.getItem("amuley_tenants");
+      const savedBoletas = localStorage.getItem("amuley_boletas");
+    if (savedBoletas) setBoletas(JSON.parse(savedBoletas));
+
+    const savedTenants = localStorage.getItem("amuley_tenants");
       const allTenants = savedTenants ? JSON.parse(savedTenants) : [];
       const updated = [...allTenants, newTenant];
       localStorage.setItem("amuley_tenants", JSON.stringify(updated));
@@ -481,12 +537,26 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
   return (
     <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)] font-sans smooth-transition text-sm md:text-base overflow-hidden">
       
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar fija a la izquierda */}
-      <aside className="w-64 lg:w-72 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex-shrink-0 flex flex-col h-full z-20 shadow-sm hidden md:flex">
-        <div className="h-16 flex items-center px-6 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+      <aside className={`fixed md:static inset-y-0 left-0 w-64 lg:w-72 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex-shrink-0 flex flex-col h-full z-50 shadow-2xl md:shadow-sm transition-transform duration-300 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} md:flex`}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
           <span className="font-serif text-xl tracking-wider font-bold">
             AM<span className="text-[var(--tenant-primary)]">U</span>LEY
           </span>
+          <button 
+            className="md:hidden text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
         
         <div className="p-4 flex-1 overflow-y-auto space-y-6">
@@ -557,6 +627,18 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
               <Mail size={16} /> Invitaciones
             </button>
 
+            <button 
+              onClick={() => setActiveTab("boletas")}
+              className={`w-full text-left px-3 py-2.5 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "boletas" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Receipt size={16} /> Boletas y Facturación
+            </button>
+
+
           </div>
         </div>
 
@@ -601,6 +683,12 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         {/* Header Superior del Panel Central */}
         <header className="h-16 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-6 flex justify-between items-center z-10 shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
+            <button 
+              className="md:hidden text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
             <span className="px-2.5 py-1 rounded-md bg-purple-600/10 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 text-xs uppercase tracking-widest font-bold flex items-center gap-1.5">
               <Shield size={12} /> Super Admin
             </span>
@@ -859,6 +947,134 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           )}
 
           {/* Directorio Global de Memoriales (Todos los clientes de todas las funerarias) */}
+
+
+          {/* Nueva Sección: Boletas */}
+          {activeTab === "boletas" && (
+          <div className="space-y-6 md:space-y-8">
+            <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+              <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                <Receipt size={18} className="text-[var(--tenant-primary)]" />
+                Gestión de Boletas y Facturación
+              </h2>
+              <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                Crea cobros para las funerarias y administra los estados de pago.
+              </p>
+              
+              <div className="bg-neutral-50 dark:bg-neutral-900/50 p-6 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 mb-8">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-4">Crear Nueva Boleta</h3>
+                <form onSubmit={handleCreateBoleta} className="grid md:grid-cols-4 gap-4 items-end">
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Funeraria</label>
+                    <select 
+                      value={newBoletaTenant}
+                      onChange={(e) => setNewBoletaTenant(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.name}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Concepto</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej. Plan Mensual"
+                      value={newBoletaConcept}
+                      onChange={(e) => setNewBoletaConcept(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Monto (USD/CLP)</label>
+                    <input 
+                      type="number" 
+                      placeholder="99.00"
+                      value={newBoletaAmount}
+                      onChange={(e) => setNewBoletaAmount(e.target.value)}
+                      required
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                    />
+                  </div>
+                  <div>
+                    <button 
+                      type="submit"
+                      disabled={isCreatingBoleta}
+                      className="w-full py-2.5 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold tracking-widest transition-all uppercase text-sm disabled:opacity-50"
+                    >
+                      {isCreatingBoleta ? "Creando..." : "Emitir Boleta"}
+                    </button>
+                  </div>
+                </form>
+                {boletaCreateMsg && (
+                  <div className={`mt-4 p-3 rounded-lg text-sm font-semibold ${
+                    boletaCreateMsg.type === "success" 
+                      ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400" 
+                      : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                  }`}>
+                    {boletaCreateMsg.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                      <th className="pb-3 font-semibold">ID</th>
+                      <th className="pb-3 font-semibold">Funeraria</th>
+                      <th className="pb-3 font-semibold">Concepto</th>
+                      <th className="pb-3 font-semibold">Monto</th>
+                      <th className="pb-3 font-semibold">Fecha</th>
+                      <th className="pb-3 font-semibold">Estado</th>
+                      <th className="pb-3 font-semibold text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                    {boletas.map((b) => (
+                      <tr key={b.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 font-mono text-xs text-neutral-500">{b.id}</td>
+                        <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{b.tenantName}</td>
+                        <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{b.concept}</td>
+                        <td className="py-3.5 font-medium text-[var(--tenant-primary)]">${b.amount}</td>
+                        <td className="py-3.5 text-neutral-500 text-sm">{b.date}</td>
+                        <td className="py-3.5">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            b.status === "Confirmada" ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400" : 
+                            b.status === "Por Confirmar" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400" :
+                            "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                          }`}>
+                            {b.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-right space-x-2">
+                          <select 
+                            value={b.status}
+                            onChange={(e) => handleChangeBoletaStatus(b.id, e.target.value)}
+                            className="bg-transparent text-xs border border-neutral-300 dark:border-neutral-700 rounded p-1 outline-none font-semibold text-neutral-600 dark:text-neutral-300"
+                          >
+                            <option value="Activa">Activa</option>
+                            <option value="Por Confirmar">Por Confirmar</option>
+                            <option value="Confirmada">Confirmada</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {boletas.length === 0 && (
+                  <div className="text-center py-12 text-neutral-400 dark:text-neutral-500 font-light">
+                    No hay boletas registradas en el sistema.
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+          )}
 
           {/* Nueva Sección: Invitaciones */}
           {activeTab === "invitaciones" && (

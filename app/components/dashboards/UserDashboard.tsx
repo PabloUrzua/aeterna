@@ -109,17 +109,17 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FCFBFA] via-[#F5F0EB] to-[#EDE6DF]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-[#967B62]/15 shadow-md">
-        <div className="max-w-6xl mx-auto px-6 md:px-10 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#967B62]/40 shadow-md">
-              <img src="/logo.png" alt="Amuley" className="w-full h-full object-cover scale-[1.5]" />
+    <div className="min-h-screen font-sans smooth-transition text-sm md:text-base" style={{background: "linear-gradient(135deg, #FAF7F4 0%, #F0E8E0 40%, #E8DDD4 100%)"}}>
+      {/* Header Premium */}
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-[#967B62]/10 shadow-[0_2px_20px_rgba(150,123,98,0.08)]">
+        <div className="max-w-6xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden shrink-0 shadow-md border-2 border-[#967B62]/40 [transform:translateZ(0)]">
+              <img src="/logo.png" alt="Amuley" className="w-full h-full object-cover scale-[1.6]" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-serif text-xl tracking-[0.25em] font-bold uppercase text-[#967B62]">AMULEY</span>
-              <span className="text-xs uppercase tracking-[0.2em] text-neutral-400 font-semibold">Mi Espacio Personal</span>
+            <div className="flex flex-col border-l border-stone-200 pl-3 md:pl-4">
+              <span className="font-serif text-lg md:text-xl tracking-[0.2em] font-bold uppercase text-[#967B62] leading-none mb-1">AMULEY</span>
+              <span className="text-[10px] md:text-xs uppercase tracking-[0.2em] text-neutral-400 font-semibold">Mi Espacio Personal</span>
             </div>
           </div>
 
@@ -141,12 +141,27 @@ export default function UserDashboard() {
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
         {/* Perfil del Usuario */}
-        <section className="bg-white rounded-3xl border border-stone-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden">
-          <div className="bg-gradient-to-r from-[#967B62] via-[#A8917A] to-[#967B62] h-44 md:h-52 relative">
-            <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.15\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"}}></div>
-            <div className="absolute bottom-6 left-8 md:left-12">
-              <h2 className="text-white/70 text-xs uppercase tracking-[0.3em] font-semibold">Bienvenido a tu espacio</h2>
+        <section className="relative overflow-hidden rounded-3xl shadow-[0_20px_60px_rgba(150,123,98,0.15)]">
+          <div
+            className="h-44 md:h-52 relative"
+            style={{background: "linear-gradient(135deg, #5C3D2A 0%, #8A6A52 30%, #B89A80 65%, #967B62 100%)"}}
+          >
+            {/* Orbes decorativos */}
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-20" style={{background: "radial-gradient(circle, #fff 0%, transparent 70%)"}}></div>
+            <div className="absolute -bottom-10 left-1/3 w-72 h-36 rounded-full opacity-10" style={{background: "radial-gradient(circle, #fff 0%, transparent 70%)"}}></div>
+            <div className="absolute top-6 right-24 w-2 h-2 bg-white/50 rounded-full"></div>
+            <div className="absolute top-12 right-40 w-1 h-1 bg-white/70 rounded-full"></div>
+            <div className="absolute top-4 right-32 w-1.5 h-1.5 bg-white/30 rounded-full"></div>
+            <div className="absolute bottom-8 left-16 w-1 h-1 bg-white/40 rounded-full"></div>
+            <div className="absolute top-8 left-48 w-1.5 h-1.5 bg-white/25 rounded-full"></div>
+
+            {/* Label */}
+            <div className="absolute top-6 left-8 md:left-10">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white/80 text-[10px] uppercase tracking-[0.25em] font-bold">
+                <Shield size={9} /> Tu Espacio
+              </span>
             </div>
+            
             <button
               onClick={() => router.push("/solicitar-memorial")}
               className="absolute top-5 right-5 md:top-6 md:right-8 flex items-center gap-2 px-5 py-3 rounded-xl bg-white/20 backdrop-blur-md text-white text-sm font-bold uppercase tracking-wider hover:bg-white/30 active:scale-[0.98] transition-all duration-300 border border-white/30 shadow-lg"
@@ -155,30 +170,38 @@ export default function UserDashboard() {
               Solicitar Memorial
             </button>
           </div>
-          <div className="px-8 md:px-12 pb-10 -mt-16 relative">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6">
-              {/* Avatar */}
-              <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-[#967B62] to-[#7D654E] flex items-center justify-center text-white text-5xl font-bold font-serif shadow-2xl border-[5px] border-white">
+          
+          {/* Contenido solapado */}
+          <div className="bg-white px-8 md:px-12 pb-8 -mt-20 relative">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
+              <div
+                className="w-28 h-28 md:w-32 md:h-32 rounded-[22px] flex items-center justify-center text-white text-4xl md:text-5xl font-bold font-serif border-[4px] border-white z-10 shadow-[0_10px_40px_rgba(150,123,98,0.35)]"
+                style={{background: "linear-gradient(145deg, #7A5A42, #967B62, #B89A80)"}}
+              >
                 {getInitials(session.email)}
               </div>
-              <div className="flex-1 pt-3">
-                <h1 className="text-3xl md:text-4xl font-serif font-semibold text-[#111]">
+              <div className="flex-1 pb-1">
+                <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#1a1208] leading-tight">
                   {session.email.split("@")[0].charAt(0).toUpperCase() + session.email.split("@")[0].slice(1)}
                 </h1>
-                <p className="text-sm text-neutral-400 mt-1 flex items-center gap-2">
-                  <Shield size={14} />
+                <p className="text-[11px] text-[#967B62] mt-1.5 flex items-center gap-1.5 font-bold uppercase tracking-widest">
+                  <Shield size={10} />
                   Usuario Visitante
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-4 mt-6 text-sm text-neutral-500">
-              <div className="flex items-center gap-2 bg-stone-50 px-5 py-3 rounded-xl">
-                <Calendar size={15} className="text-[#967B62]" />
-                <span>Miembro desde {memberSince ? formatDate(memberSince) : "hoy"}</span>
+            <div className="flex flex-wrap gap-2.5 mt-5">
+              <div className="inline-flex items-center gap-2 text-xs text-neutral-500 bg-stone-50 border border-stone-100 px-4 py-2.5 rounded-xl">
+                <Calendar size={12} className="text-[#967B62]" />
+                <span>Miembro desde <strong className="text-neutral-700">{memberSince ? formatDate(memberSince) : "hoy"}</strong></span>
               </div>
-              <div className="flex items-center gap-2 bg-stone-50 px-5 py-3 rounded-xl">
-                <Mail size={15} className="text-[#967B62]" />
+              <div className="inline-flex items-center gap-2 text-xs text-neutral-500 bg-stone-50 border border-stone-100 px-4 py-2.5 rounded-xl">
+                <Mail size={12} className="text-[#967B62]" />
                 <span>{session.email}</span>
+              </div>
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl">
+                <Sparkles size={12} />
+                Cuenta Activa
               </div>
             </div>
           </div>
@@ -186,37 +209,43 @@ export default function UserDashboard() {
 
         {/* Estadísticas Rápidas */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="bg-white rounded-2xl border border-stone-200/60 p-6 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#967B62]/10 flex items-center justify-center mb-3">
-              <Heart size={24} className="text-[#967B62]" />
+          <div className="rounded-3xl p-6 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group border border-white/20"
+               style={{background: "linear-gradient(135deg, #B89A80 0%, #967B62 100%)"}}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-3 relative z-10 shadow-inner">
+              <Heart size={24} className="text-white drop-shadow-md" />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-[#111] font-serif">{invitedMemorials.length}</p>
-              <p className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">
+            <div className="relative z-10">
+              <p className="text-4xl font-bold text-white font-serif drop-shadow-sm">{invitedMemorials.length}</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/80 font-bold mt-1">
                 {invitedMemorials.length === 1 ? "Memorial Invitado" : "Memoriales Invitados"}
               </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-stone-200/60 p-6 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-3">
-              <Sparkles size={24} className="text-emerald-600" />
+          <div className="rounded-3xl p-6 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group border border-white/20"
+               style={{background: "linear-gradient(135deg, #2A5C4A 0%, #1B3D31 100%)"}}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-3 relative z-10 shadow-inner">
+              <Sparkles size={24} className="text-[#A7D4B4] drop-shadow-md" />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-[#111] font-serif">
+            <div className="relative z-10">
+              <p className="text-4xl font-bold text-white font-serif drop-shadow-sm">
                 {invitedMemorials.length > 0 ? "Sí" : "No"}
               </p>
-              <p className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">Fue Invitado</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#A7D4B4] font-bold mt-1">Fue Invitado</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-stone-200/60 p-6 shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-3">
-              <User size={24} className="text-blue-600" />
+          <div className="rounded-3xl p-6 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group border border-white/20"
+               style={{background: "linear-gradient(135deg, #2A455C 0%, #1A2D3D 100%)"}}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-3 relative z-10 shadow-inner">
+              <User size={24} className="text-[#A7C8D4] drop-shadow-md" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[#111] font-serif">Visitante</p>
-              <p className="text-[10px] uppercase tracking-widest text-neutral-400 font-bold mt-1">Tu Rol</p>
+            <div className="relative z-10">
+              <p className="text-3xl font-bold text-white font-serif drop-shadow-sm mt-1 mb-1">Visitante</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#A7C8D4] font-bold mt-1">Tu Rol</p>
             </div>
           </div>
         </div>

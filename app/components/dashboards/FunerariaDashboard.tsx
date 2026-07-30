@@ -18,7 +18,9 @@ import {
   CheckCircle,
   Undo,
   Layers,
-  Laptop
+  Laptop,
+  Menu,
+  X
 } from "lucide-react";
 import { useBranding, presets } from "../../context/BrandingContext";
 import confetti from "canvas-confetti";
@@ -29,7 +31,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const { config, updateConfig, applyPreset, resetConfig, activePreset } = useBranding();
   
   const [createdMemorials, setCreatedMemorials] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "memoriales" | "usuarios">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "memoriales" | "usuarios" | "sucursales">("overview");
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUserName, setNewUserName] = useState("");
@@ -38,7 +40,15 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const [newUserRole, setNewUserRole] = useState("FAMILIA");
   const [userCreateMsg, setUserCreateMsg] = useState<{type: "success"|"error", text: string} | null>(null);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+
+  const [branches, setBranches] = useState<any[]>([]);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [newBranchCity, setNewBranchCity] = useState("");
+  const [newBranchAddress, setNewBranchAddress] = useState("");
+  const [isCreatingBranch, setIsCreatingBranch] = useState(false);
+  const [branchCreateMsg, setBranchCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   React.useEffect(() => {
     const sessionStr = localStorage.getItem("user_session");
@@ -68,7 +78,16 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       }
     };
 
+    const loadBranches = () => {
+      const savedBranches = localStorage.getItem("amuley_branches");
+      if (savedBranches) {
+        const allBranches = JSON.parse(savedBranches);
+        setBranches(allBranches.filter((b: any) => b.tenantName === config.name));
+      }
+    };
+
     reloadUsers();
+    loadBranches();
 
     // Sincronizar estado en "Tiempo Real" si otra pestaña actualiza localStorage
     const handleStorageChange = (e: StorageEvent) => {
@@ -110,14 +129,6 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
     };
   }, [config.name]);
 
-  const [branches, setBranches] = useState([
-    { id: "b1", name: "Sucursal Centro", city: "Santiago", address: "Av. Providencia 1024" },
-    { id: "b2", name: "Sucursal Valparaíso", city: "Valparaíso", address: "Condell 450" }
-  ]);
-
-  const [newBranchName, setNewBranchName] = useState("");
-  const [newBranchCity, setNewBranchCity] = useState("");
-  const [newBranchAddress, setNewBranchAddress] = useState("");
   const [dnsStatus, setDnsStatus] = useState<"pending" | "checking" | "verified">("verified");
 
   // Formulario creación
@@ -226,6 +237,37 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
     }
   };
 
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchName.trim() || !newBranchCity.trim()) return;
+
+    setIsCreatingBranch(true);
+    setBranchCreateMsg(null);
+
+    const newBranch = {
+      id: `b-${Date.now()}`,
+      name: newBranchName,
+      city: newBranchCity,
+      address: newBranchAddress,
+      tenantName: config.name,
+      createdAt: new Date().toISOString().substring(0, 10),
+      status: "Activa"
+    };
+
+    const savedBranches = localStorage.getItem("amuley_branches");
+    const allBranches = savedBranches ? JSON.parse(savedBranches) : [];
+    const updated = [...allBranches, newBranch];
+    localStorage.setItem("amuley_branches", JSON.stringify(updated));
+    setBranches(updated.filter(b => b.tenantName === config.name));
+
+    setBranchCreateMsg({ type: "success", text: "Sucursal creada exitosamente." });
+    setNewBranchName("");
+    setNewBranchCity("");
+    setNewBranchAddress("");
+    setIsCreatingBranch(false);
+    confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+  };
+
   const handleCreateMemorial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newFamilyEmail.trim()) return;
@@ -323,10 +365,19 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans smooth-transition text-sm md:text-base">
-      {/* Header del Portal */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 shadow-xs">
-        <div className="flex items-center gap-3">
+    <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)] font-sans smooth-transition text-sm md:text-base overflow-hidden">
+      
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar fija a la izquierda */}
+      <aside className={`fixed md:static inset-y-0 left-0 w-64 lg:w-72 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex-shrink-0 flex flex-col h-full z-50 shadow-2xl md:shadow-sm transition-transform duration-300 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} md:flex`}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
           <span className="font-serif text-lg tracking-wider font-semibold flex items-center gap-2 group">
             <svg 
               viewBox="0 0 24 24" 
@@ -336,33 +387,17 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
             >
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {config.name.toUpperCase()}
+            <span className="truncate">{config.name.toUpperCase()}</span>
           </span>
-          <span className="px-2 py-0.5 rounded bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)] text-xs md:text-sm uppercase tracking-widest font-bold">
-            Portal B2B
-          </span>
+          <button 
+            className="md:hidden text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="font-medium text-neutral-600 dark:text-neutral-300">
-            {config.logoText}
-          </span>
-          {originalRole === "ADMIN" && (
-            <button 
-              onClick={() => switchRole?.("ADMIN")}
-              className="text-xs md:text-sm text-neutral-400 hover:text-[var(--tenant-primary)] dark:hover:text-white transition-colors flex items-center gap-1"
-            >
-              <Undo size={12} /> Volver a Admin
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* Grid Principal */}
-      <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8 grid lg:grid-cols-4 gap-5 md:p-8">
-        
-        {/* Sidebar de navegación */}
-        <aside className="lg:col-span-1 space-y-6">
+        <div className="p-4 flex-1 overflow-y-auto space-y-6">
           {originalRole === "ADMIN" && (
             <div className="glass-panel p-4 rounded-xl space-y-1 mb-6">
               <div className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold px-3 py-2">
@@ -411,6 +446,16 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
               }`}
             >
               <FileText size={14} /> Gestión de Memoriales
+            </button>
+            <button 
+              onClick={() => setActiveTab("sucursales")}
+              className={`w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "sucursales" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Layers size={14} /> Gestión de Sucursales
             </button>
             <button 
               onClick={() => setActiveTab("usuarios")}
@@ -481,11 +526,44 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
               </div>
             </div>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        {/* Dashboard Principal */}
-        <main className="lg:col-span-3 space-y-8">
-          
+      {/* Contenedor Principal */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Header Superior del Panel Central */}
+        <header className="h-16 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 px-6 flex justify-between items-center z-10 shrink-0 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button 
+              className="md:hidden text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
+            <span className="px-2.5 py-1 rounded-md bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)] text-xs md:text-sm uppercase tracking-widest font-bold flex items-center gap-1.5">
+              Portal B2B
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="font-medium text-neutral-600 dark:text-neutral-300">
+              {config.logoText}
+            </span>
+            {originalRole === "ADMIN" && (
+              <button 
+                onClick={() => switchRole?.("ADMIN")}
+                className="text-xs md:text-sm text-neutral-400 hover:text-[var(--tenant-primary)] dark:hover:text-white transition-colors flex items-center gap-1"
+              >
+                <Undo size={12} /> Volver a Admin
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Contenido Principal Scrolleable */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--background)]">
+          <div className="max-w-7xl mx-auto space-y-8 pb-12">
+            
           {activeTab === "overview" && (
             <div className="space-y-8">
               {/* Módulo de Personalización White Label */}
@@ -1284,7 +1362,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     <button 
                       type="submit"
                       disabled={isCreatingUser}
-                      className="w-full py-3.5 rounded-full bg-tenant-btn-main text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm"
+                      className="w-full py-3.5 rounded-full bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
                     >
                       {isCreatingUser ? "Registrando..." : "Crear Usuario"}
                     </button>
@@ -1339,6 +1417,109 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
             </div>
           )}
 
+          {/* Pestaña Sucursales */}
+          {activeTab === "sucursales" && (
+            <div className="space-y-6 md:space-y-8">
+              <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+                <h2 className="font-serif text-xl font-bold mb-2 flex items-center gap-2">
+                  <Layers size={18} className="text-[var(--tenant-primary)]" />
+                  Gestión de Sucursales
+                </h2>
+                <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
+                  Crea y administra las sucursales de tu funeraria.
+                </p>
+
+                <div className="bg-neutral-50 dark:bg-neutral-900/50 p-6 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 mb-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-4">Nueva Sucursal</h3>
+                  <form onSubmit={handleCreateBranch} className="grid md:grid-cols-4 gap-4 items-end">
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre</label>
+                      <input 
+                        type="text" 
+                        placeholder="Sucursal Norte"
+                        value={newBranchName}
+                        onChange={(e) => setNewBranchName(e.target.value)}
+                        required
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Ciudad</label>
+                      <input 
+                        type="text" 
+                        placeholder="Santiago"
+                        value={newBranchCity}
+                        onChange={(e) => setNewBranchCity(e.target.value)}
+                        required
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Dirección</label>
+                      <input 
+                        type="text" 
+                        placeholder="Av. Principal 123"
+                        value={newBranchAddress}
+                        onChange={(e) => setNewBranchAddress(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={isCreatingBranch}
+                      className="w-full py-2.5 px-6 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+                    >
+                      {isCreatingBranch ? "Creando..." : "Crear"}
+                    </button>
+                  </form>
+                  {branchCreateMsg && (
+                    <div className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${branchCreateMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                      {branchCreateMsg.type === "success" ? <CheckCircle size={16} /> : <ShieldAlert size={16} />}
+                      {branchCreateMsg.text}
+                    </div>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto mt-6">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                        <th className="pb-3 font-semibold">Nombre de Sucursal</th>
+                        <th className="pb-3 font-semibold">Ciudad</th>
+                        <th className="pb-3 font-semibold">Dirección</th>
+                        <th className="pb-3 font-semibold">Fecha de Creación</th>
+                        <th className="pb-3 font-semibold text-right">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                      {branches.map((b) => (
+                        <tr key={b.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                          <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{b.name}</td>
+                          <td className="py-3.5 text-neutral-500">{b.city}</td>
+                          <td className="py-3.5 text-neutral-500">{b.address}</td>
+                          <td className="py-3.5 text-neutral-500 text-sm">{b.createdAt}</td>
+                          <td className="py-3.5 text-right">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-800/10 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                              {b.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {branches.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-neutral-400 italic">
+                            No tienes sucursales registradas.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+
+          </div>
         </main>
       </div>
     </div>
