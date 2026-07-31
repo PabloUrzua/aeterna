@@ -61,27 +61,30 @@ export default function SolicitarMemorialPage() {
     const userSession = JSON.parse(localStorage.getItem("user_session") || "{}");
     const userEmail = userSession.email || "usuario@ejemplo.com";
 
+    const subject = `Solicitud de Memorial - ${reqName}`;
+    const body = `Hola, quiero solicitar un memorial con los siguientes datos:
+
+Detalles de la solicitud:
+- Para: ${reqName}
+- Tipo: ${type === "persona" ? "Persona" : "Mascota"}
+- Plan seleccionado: ${reqPlan}
+- Placa Física: ${reqPlaca ? "Sí (+$20.000)" : "No"}
+- Total a pagar: $${totalPrice.toLocaleString("es-CL")}
+- Mi relación: ${reqRelation || "-"}
+${type === "mascota" ? `- Especie/Raza: ${reqSpecies} / ${reqBreed}\n` : ""}
+Historia o Mensaje:
+${reqMessage || "Sin mensaje"}
+
+Mis datos de contacto:
+Email: ${userEmail}
+
+Quedo a la espera de sus instrucciones.`;
+
+    window.location.href = `mailto:ventas@amuley.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
     const newReq = { name: reqName, type, plan: reqPlan, placa: reqPlaca, date: new Date().toISOString(), status: "Pendiente" };
     const prev = JSON.parse(localStorage.getItem("amuley_user_requests") || "[]");
     localStorage.setItem("amuley_user_requests", JSON.stringify([...prev, newReq]));
-
-    try {
-      await fetch("/api/solicitar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          ...newReq, 
-          userEmail, 
-          relation: reqRelation, 
-          message: reqMessage,
-          species: reqSpecies,
-          breed: reqBreed,
-          totalPrice
-        })
-      });
-    } catch (err) {
-      console.error("Error sending email:", err);
-    }
 
     setReqSent(true);
   };
@@ -399,7 +402,7 @@ export default function SolicitarMemorialPage() {
                   </div>
 
                   {isPet && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] uppercase tracking-[0.2em] text-neutral-400 font-black block mb-1.5">Especie *</label>
                         <select required value={reqSpecies} onChange={(e) => setReqSpecies(e.target.value)}
@@ -437,7 +440,7 @@ export default function SolicitarMemorialPage() {
                   </div>
 
                   {/* Fechas */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                       { label: "Fecha nacimiento", value: reqBirth, set: setReqBirth },
                       { label: "Fecha fallecimiento", value: reqDeath, set: setReqDeath },

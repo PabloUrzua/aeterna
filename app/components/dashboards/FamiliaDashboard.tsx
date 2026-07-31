@@ -48,14 +48,51 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
   const [session, setSession] = useState<{ email: string; role: string } | null>(null);
   const [memberSince, setMemberSince] = useState("");
 
+  // Estados de "Gestión de Accesos Familiares" (Real via Supabase)
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [familyMembersList, setFamilyMembersList] = useState<any[]>([]);
+  const [myInvitations, setMyInvitations] = useState<any[]>([]);
+  const [isLoadingAccess, setIsLoadingAccess] = useState(true);
+
   useEffect(() => {
     const saved = localStorage.getItem("user_session");
+    let currentSession = null;
     if (saved) {
-      setSession(JSON.parse(saved));
+      currentSession = JSON.parse(saved);
+      setSession(currentSession);
     }
     const regDate = localStorage.getItem("amuley_user_registered");
     if (regDate) setMemberSince(regDate);
+    
+    fetchFamilyAccesses(currentSession);
   }, []);
+
+  const fetchFamilyAccesses = async (currentSession: any) => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('family_accesses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn("Could not fetch family_accesses (Table might not exist yet).");
+        return;
+      }
+
+      if (data) {
+        setAccessRequests(data.filter(d => d.status === 'pending'));
+        setFamilyMembersList(data.filter(d => d.status === 'accepted' || d.status === 'invited'));
+        if (currentSession?.email) {
+          setMyInvitations(data.filter(d => d.status === 'invited' && d.email.toLowerCase() === currentSession.email.toLowerCase()));
+        }
+      }
+    } catch (err: any) {
+      console.warn("Exception fetching family accesses:", err.message);
+    } finally {
+      setIsLoadingAccess(false);
+    }
+  };
 
   const getInitials = (email: string) => {
     if (!email) return "U";
@@ -79,65 +116,6 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
   // Extra states for unified User/Familia dashboard
   const [invitedMemorials, setInvitedMemorials] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<{name: string; date: string; status: string}[]>([]);
-
-  // Estados de "Gestión de Accesos Familiares" (Real via Supabase)
-  const [accessRequests, setAccessRequests] = useState<any[]>([]);
-  const [familyMembersList, setFamilyMembersList] = useState<any[]>([]);
-  const [isLoadingAccess, setIsLoadingAccess] = useState(true);
-
-  const fetchFamilyAccesses = async () => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('family_accesses')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.warn("Could not fetch family_accesses (Table might not exist yet).");
-        return;
-      }
-
-      if (data) {
-        setAccessRequests(data.filter(d => d.status === 'pending'));
-        setFamilyMembersList(data.filter(d => d.status === 'accepted'));
-      }
-    } catch (err: any) {
-      console.warn("Exception fetching family accesses:", err.message);
-    } finally {
-      setIsLoadingAccess(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFamilyAccesses();
-  }, []);
-  const [newInviteEmail, setNewInviteEmail] = useState("");
-
-  const handleSendFamilyInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newInviteEmail.trim()) return;
-    
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('family_accesses')
-        .insert([
-          { email: newInviteEmail.trim(), status: 'accepted', role: 'Familiar' }
-        ])
-        .select();
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        setFamilyMembersList(prev => [data[0], ...prev]);
-        setNewInviteEmail("");
-        showToast("Familiar agregado directamente", "success");
-      }
-    } catch (err: any) {
-      showToast(`Error al agregar familiar: ${err.message}`, "error", "Error");
-    }
-  };
 
   const handleRemoveMember = async (id: string) => {
     try {
@@ -191,6 +169,44 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
       showToast("Solicitud denegada.", "info");
     } catch (err: any) {
       showToast(`Error al denegar: ${err.message}`, "error", "Error");
+    }
+  };
+
+  const handleAcceptInvitation = async (req: any) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('family_accesses')
+        .update({ status: 'accepted' })
+        .eq('id', req.id);
+
+      if (error) throw error;
+      
+      showToast("¡Has aceptado la invitación a la familia!", "success");
+      
+      // Reload page to re-evaluate role
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      showToast(`Error al aceptar invitación: ${err.message}`, "error", "Error");
+    }
+  };
+
+  const handleDenyInvitation = async (id: string) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('family_accesses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setMyInvitations(prev => prev.filter(r => r.id !== id));
+      showToast("Has rechazado la invitación.", "info");
+    } catch (err: any) {
+      showToast(`Error al rechazar invitación: ${err.message}`, "error", "Error");
     }
   };
 
@@ -263,47 +279,37 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteName.trim() || !inviteEmail.trim()) return;
-
+    if (!inviteEmail.trim()) return;
+    
     try {
       const supabase = createClient();
-      
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: inviteEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        }
-      });
+      const { data, error } = await supabase
+        .from('family_accesses')
+        .insert([
+          { email: inviteEmail.trim(), status: 'invited', role: inviteRole }
+        ])
+        .select();
 
-      if (authError) {
-        showToast(`Error enviando invitación: ${authError.message}`, "error", "Error");
-        return;
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        showToast("Invitación enviada correctamente", "success");
+        setInviteName("");
+        setInviteEmail("");
+        setShowInviteSuccess(true);
+        
+        confetti({
+          particleCount: 15,
+          spread: 20,
+          colors: [config.primaryColor]
+        });
+
+        setTimeout(() => {
+          setShowInviteSuccess(false);
+        }, 3000);
       }
-
-      const newMember = {
-        id: `f_${Date.now()}`,
-        name: inviteName,
-        role: inviteRole,
-        relation: inviteRelation,
-        email: inviteEmail
-      };
-
-      setFamilyMembers(prev => [...prev, newMember]);
-      setInviteName("");
-      setInviteEmail("");
-      setShowInviteSuccess(true);
-      
-      confetti({
-        particleCount: 15,
-        spread: 20,
-        colors: [config.primaryColor]
-      });
-
-      setTimeout(() => {
-        setShowInviteSuccess(false);
-      }, 3000);
     } catch (err: any) {
-      showToast(`Error inesperado: ${err.message}`, "error", "Error");
+      showToast(`Error al enviar invitación: ${err.message}`, "error", "Error");
     }
   };
 
@@ -377,12 +383,7 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
               <Mail size={13} className="text-[#967B62]" />
               <span className="max-w-[180px] truncate">{session ? session.email : "Cargando..."}</span>
             </div>
-            <Link 
-              href="/memorial/alejandro-valenzuela"
-              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#967B62] bg-[#967B62]/8 border border-[#967B62]/20 hover:bg-[#967B62]/15 transition-all"
-            >
-              Ver Memorial <ExternalLink size={13} />
-            </Link>
+
             {originalRole === "ADMIN" && (
               <button 
                 onClick={() => switchRole?.("ADMIN")}
@@ -483,8 +484,12 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
               <Heart size={18} className="text-white" fill="rgba(255,255,255,0.3)" />
             </div>
-            <p className="text-3xl font-bold text-white font-serif leading-none">1</p>
-            <p className="text-[10px] uppercase tracking-widest text-white/65 font-bold mt-1.5">Memorial</p>
+            <p className="text-3xl font-bold text-white font-serif leading-none">
+              {(originalRole === "ADMIN" || originalRole === "FAMILIA") ? "1" : "0"}
+            </p>
+            <p className="text-[10px] uppercase tracking-widest text-white/65 font-bold mt-1.5">
+              {(originalRole === "ADMIN" || originalRole === "FAMILIA") ? "Memorial" : "Memoriales"}
+            </p>
           </div>
 
           <div
@@ -501,7 +506,7 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
           </div>
 
           <div
-            className="relative overflow-hidden rounded-2xl p-5 cursor-default hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 shadow-md hover:shadow-xl"
+            className="relative overflow-hidden rounded-2xl p-5 cursor-default hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 shadow-md hover:shadow-xl flex flex-col justify-between"
             style={{background: "linear-gradient(145deg, #2d6abf 0%, #1a4080 100%)"}}
           >
             <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/10"></div>
@@ -509,8 +514,8 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
               <Mail size={18} className="text-white" />
             </div>
-            <p className="text-3xl font-bold text-white font-serif leading-none">{invitedMemorials.length}</p>
-            <p className="text-[10px] uppercase tracking-widest text-white/65 font-bold mt-1.5">Invitaciones</p>
+            <p className="text-3xl font-bold text-white font-serif leading-none">{myInvitations.length}</p>
+            <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-white/65 font-bold mt-1.5 truncate">Invitaciones</p>
           </div>
         </div>
 
@@ -598,14 +603,25 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                 </div>
 
                 {/* Botón principal */}
-                <button
-                  onClick={() => setIsEditingMemorial(true)}
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white text-xs uppercase tracking-[0.15em] font-bold active:scale-[0.98] transition-all duration-300 shadow-md hover:shadow-lg hover:brightness-110"
-                  style={{background: "linear-gradient(135deg, #967B62 0%, #7D654E 100%)"}}
-                >
-                  <Settings size={14} />
-                  Administrar Memorial
-                </button>
+                {(originalRole === "ADMIN" || originalRole === "FAMILIA") ? (
+                  <button
+                    onClick={() => setIsEditingMemorial(true)}
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white text-xs uppercase tracking-[0.15em] font-bold active:scale-[0.98] transition-all duration-300 shadow-md hover:shadow-lg hover:brightness-110"
+                    style={{background: "linear-gradient(135deg, #967B62 0%, #7D654E 100%)"}}
+                  >
+                    <Settings size={14} />
+                    Administrar Memorial
+                  </button>
+                ) : (
+                  <Link
+                    href="/memorial/alejandro-valenzuela"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white text-xs uppercase tracking-[0.15em] font-bold active:scale-[0.98] transition-all duration-300 shadow-md hover:shadow-lg hover:brightness-110"
+                    style={{background: "linear-gradient(135deg, #967B62 0%, #7D654E 100%)"}}
+                  >
+                    <ExternalLink size={14} />
+                    Ver Memorial
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -614,9 +630,42 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
 
 
 
-
+        {/* Invitaciones Recibidas (Solo Visitantes) */}
+        {(originalRole !== "ADMIN" && originalRole !== "FAMILIA") && myInvitations.length > 0 && (
+          <section className="mt-8">
+            <div className="flex items-center gap-2 mb-5">
+              <Mail size={18} className="text-[#967B62]" />
+              <h2 className="font-serif text-lg font-semibold text-[#111]">Invitaciones a Familias</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {myInvitations.map(inv => (
+                <div key={inv.id} className="bg-white rounded-2xl border border-stone-200/60 p-6 shadow-sm">
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Has sido invitado a unirte como <strong className="text-[#111]">{inv.role}</strong>.
+                  </p>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => handleAcceptInvitation(inv)}
+                      className="flex-1 py-2.5 bg-[#967B62] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#856b54] transition-colors"
+                    >
+                      Aceptar
+                    </button>
+                    <button 
+                      onClick={() => handleDenyInvitation(inv.id)}
+                      className="flex-1 py-2.5 bg-neutral-100 text-neutral-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-neutral-200 transition-colors"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Gestión de Accesos Familiares */}
+        {(originalRole === "ADMIN" || originalRole === "FAMILIA") && (
         <section className="mt-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
             <div className="flex items-center gap-2">
@@ -647,9 +696,9 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                 <div className="space-y-3 flex-1">
                   {accessRequests.map(req => (
                     <div key={req.id} className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-[#111]">{req.email}</p>
-                        <p className="text-xs text-neutral-500">Solicitó unirse el: {formatDate(req.date)}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#111] break-all">{req.email}</p>
+                        <p className="text-xs text-neutral-500 mt-1">Solicitó unirse el: {formatDate(req.created_at)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
@@ -678,18 +727,21 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                 Familiares con Acceso
               </h3>
 
-              <form onSubmit={handleSendFamilyInvite} className="flex gap-2 mb-6">
-                <input 
-                  type="email" 
-                  required
-                  placeholder="Agregar correo de un familiar directamente..."
-                  value={newInviteEmail}
-                  onChange={(e) => setNewInviteEmail(e.target.value)}
-                  className="flex-1 px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:border-[#967B62]"
-                />
-                <button type="submit" className="px-4 py-2 bg-[#967B62] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#856b54] transition-colors whitespace-nowrap">
-                  Agregar
-                </button>
+              <form onSubmit={handleSendInvite} className="flex flex-col gap-2 mb-6">
+                <p className="text-xs text-neutral-500 font-medium">Invitar a un familiar al memorial:</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="Correo electrónico del familiar..."
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 min-w-0 px-4 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:border-[#967B62]"
+                  />
+                  <button type="submit" className="shrink-0 px-4 py-2 bg-[#967B62] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#856b54] transition-colors whitespace-nowrap">
+                    Invitar
+                  </button>
+                </div>
               </form>
 
               {isLoadingAccess ? (
@@ -706,22 +758,28 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
                 <div className="space-y-3 flex-1 max-h-[300px] overflow-y-auto pr-2">
                   {familyMembersList.map(member => (
                     <div key={member.id} className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#967B62]/10 flex items-center justify-center text-[#967B62] font-bold text-xs">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-[#967B62]/10 flex items-center justify-center text-[#967B62] font-bold text-xs shrink-0">
                           {getInitials(member.email)}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#111]">{member.email}</p>
-                          <p className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">{member.role}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[#111] break-all leading-tight mb-1">
+                            {member.email} {member.email === session?.email && <span className="text-[9px] text-[#967B62] font-bold ml-1">(Tú)</span>}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">
+                            {member.role} {member.status === 'invited' && <span className="text-amber-500 ml-1">(Pendiente)</span>}
+                          </p>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors p-1 flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider"
-                        title="Eliminar"
-                      >
-                        <XCircle size={14} /> Eliminar
-                      </button>
+                      {member.email !== session?.email && (
+                        <button 
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="shrink-0 text-red-400 hover:text-red-600 transition-colors p-1 flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider whitespace-nowrap"
+                          title={member.status === 'invited' ? "Cancelar Invitación" : "Eliminar"}
+                        >
+                          <XCircle size={14} /> {member.status === 'invited' ? "Cancelar" : "Eliminar"}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -729,6 +787,7 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
             </div>
           </div>
         </section>
+        )}
         </>
         )}
 

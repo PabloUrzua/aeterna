@@ -12,6 +12,7 @@ import {
 import MediaLightbox from "@/components/MediaLightbox";
 import QrCodeGenerator from "@/components/QrCodeGenerator";
 import confetti from "canvas-confetti";
+import { createClient } from "@/utils/supabase/client";
 
 interface Memory {
   id: string;
@@ -58,6 +59,12 @@ export default function MemorialPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [privacyError, setPrivacyError] = useState(false);
+
+  // Request Access
+  const [requestEmail, setRequestEmail] = useState("");
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [requestError, setRequestError] = useState("");
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<"bio" | "gallery" | "guestbook" | "tree">("bio");
@@ -199,6 +206,30 @@ export default function MemorialPage() {
     });
   };
 
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestEmail.trim()) return;
+    setIsRequestingAccess(true);
+    setRequestError("");
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('family_accesses')
+        .insert([{ email: requestEmail.trim(), status: 'pending', role: 'Familiar' }]);
+        
+      if (error) throw error;
+      
+      setRequestSuccess(true);
+      setRequestEmail("");
+    } catch (err: any) {
+      console.warn("Error requesting access:", err.message);
+      setRequestError("Hubo un error al enviar la solicitud.");
+    } finally {
+      setIsRequestingAccess(false);
+    }
+  };
+
   const handleGiveFlower = () => {
     if (isFlowerGiven) return;
     setIsFlowerGiven(true);
@@ -320,6 +351,35 @@ export default function MemorialPage() {
             </span>
           )}
 
+          <div className="pt-6 border-t border-stone-100">
+            <h4 className="text-sm font-medium text-neutral-600 mb-2">¿Eres familiar y no tienes la clave?</h4>
+            {requestSuccess ? (
+              <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-200">
+                ¡Solicitud enviada! El administrador te dará acceso pronto.
+              </div>
+            ) : (
+              <form onSubmit={handleRequestAccess} className="space-y-2">
+                <input 
+                  type="email"
+                  placeholder="Tu correo electrónico"
+                  value={requestEmail}
+                  onChange={(e) => setRequestEmail(e.target.value)}
+                  required
+                  className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2.5 outline-none text-center text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={isRequestingAccess}
+                  className="w-full py-2.5 rounded-lg border border-[#967B62] text-[#967B62] hover:bg-[#967B62] hover:text-white text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {isRequestingAccess ? "Enviando..." : "Solicitar Acceso"}
+                </button>
+                {requestError && (
+                  <span className="text-xs text-red-500 block mt-1">{requestError}</span>
+                )}
+              </form>
+            )}
+          </div>
           <div className="text-sm text-neutral-500 font-mono pt-3 border-t border-stone-100 ">
             Amuley Legacy Preservation System
           </div>

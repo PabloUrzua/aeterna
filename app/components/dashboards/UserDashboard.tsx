@@ -22,6 +22,7 @@ import {
   AlertCircle,
   FileText
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 interface InvitedMemorial {
   id: string;
@@ -44,6 +45,12 @@ export default function UserDashboard() {
 
   // Solicitudes previas
   const [myRequests, setMyRequests] = useState<{name: string; date: string; status: string}[]>([]);
+
+  // Pedir unirse a familia
+  const [targetAdminEmail, setTargetAdminEmail] = useState("");
+  const [isRequestingFamily, setIsRequestingFamily] = useState(false);
+  const [familyRequestStatus, setFamilyRequestStatus] = useState<"idle" | "success" | "error">("idle");
+  const [familyRequestMessage, setFamilyRequestMessage] = useState("");
 
   useEffect(() => {
     let parsedSession = null;
@@ -98,6 +105,33 @@ export default function UserDashboard() {
 
   const getInitials = (email: string) => {
     return email.split("@")[0].substring(0, 2).toUpperCase();
+  };
+
+  const handleRequestFamilyAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session || !targetAdminEmail.trim()) return;
+    setIsRequestingFamily(true);
+    setFamilyRequestStatus("idle");
+    
+    try {
+      const supabase = createClient();
+      // Insert a request. Target admin email isn't stored in DB schema yet,
+      // but inserting the user's email puts them in the admin's 'Propuestas de Acceso' queue.
+      const { error } = await supabase
+        .from('family_accesses')
+        .insert([{ email: session.email, status: 'pending', role: 'Familiar' }]);
+        
+      if (error) throw error;
+      
+      setFamilyRequestStatus("success");
+      setFamilyRequestMessage("¡Solicitud enviada! El administrador deberá aceptarla en su panel.");
+      setTargetAdminEmail("");
+    } catch (err: any) {
+      setFamilyRequestStatus("error");
+      setFamilyRequestMessage("Ocurrió un error al enviar la solicitud.");
+    } finally {
+      setIsRequestingFamily(false);
+    }
   };
 
   if (!session) {
@@ -249,6 +283,52 @@ export default function UserDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Solicitar unirse a Familia */}
+        <section className="bg-white rounded-3xl border border-stone-200/60 p-6 shadow-sm mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield size={18} className="text-[#967B62]" />
+            <h2 className="font-serif text-lg font-semibold text-[#111]">Solicitar unirse a una Familia</h2>
+          </div>
+          <p className="text-sm text-neutral-500 mb-5">
+            Si un familiar ya creó el memorial y es Administrador, envíale una solicitud para que te agregue a la familia y puedas subir fotos o mensajes.
+          </p>
+          
+          <form onSubmit={handleRequestFamilyAccess} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input 
+                type="email" 
+                required
+                placeholder="Correo electrónico del Administrador"
+                value={targetAdminEmail}
+                onChange={(e) => setTargetAdminEmail(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#967B62] focus:bg-white transition-all"
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={isRequestingFamily}
+              className="shrink-0 px-6 py-3 bg-[#967B62] text-white rounded-xl text-sm font-bold uppercase tracking-wider hover:bg-[#856b54] active:scale-[0.98] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isRequestingFamily ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+              Enviar Solicitud
+            </button>
+          </form>
+          
+          {familyRequestStatus !== "idle" && (
+            <div className={`mt-4 p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${
+              familyRequestStatus === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
+            }`}>
+              {familyRequestStatus === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+              {familyRequestMessage}
+            </div>
+          )}
+        </section>
 
         {/* Memoriales Invitados */}
         <section>

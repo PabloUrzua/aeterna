@@ -14,41 +14,60 @@ export default function MasterDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const sessionStr = localStorage.getItem("user_session");
-    if (!sessionStr) {
-      router.push("/login");
-      return;
-    }
-    try {
-      const session = JSON.parse(sessionStr);
-      let sessionRole = session.role || "USER";
-      
-      // Update from pseudo-DB in case SuperAdmin changed their role
-      const savedUsersStr = localStorage.getItem("amuley_users");
-      if (savedUsersStr) {
-        const savedUsers = JSON.parse(savedUsersStr);
-        const foundUser = savedUsers.find((u: any) => u.email.toLowerCase() === session.email.toLowerCase());
-        if (foundUser && foundUser.role) {
-          sessionRole = foundUser.role;
-          // Update stale session
-          session.role = sessionRole;
-          localStorage.setItem("user_session", JSON.stringify(session));
-        }
+    const checkRole = async () => {
+      const sessionStr = localStorage.getItem("user_session");
+      if (!sessionStr) {
+        router.push("/login");
+        return;
       }
+      try {
+        const session = JSON.parse(sessionStr);
+        let sessionRole = session.role || "USER";
+        
+        // Update from pseudo-DB in case SuperAdmin changed their role
+        const savedUsersStr = localStorage.getItem("amuley_users");
+        if (savedUsersStr) {
+          const savedUsers = JSON.parse(savedUsersStr);
+          const foundUser = savedUsers.find((u: any) => u.email.toLowerCase() === session.email.toLowerCase());
+          if (foundUser && foundUser.role) {
+            sessionRole = foundUser.role;
+          }
+        }
 
-      if (session.email?.toLowerCase() === "pccleanltda@gmail.com") {
-        sessionRole = "FUNERARIA";
+        if (session.email?.toLowerCase() === "pccleanltda@gmail.com") {
+          sessionRole = "FUNERARIA";
+        }
+
+        // Check if user is a familiar in Supabase
+        if (sessionRole === "USER") {
+          const { createClient } = await import("@/utils/supabase/client");
+          const supabase = createClient();
+          const { data } = await supabase
+            .from('family_accesses')
+            .select('*')
+            .eq('email', session.email.toLowerCase())
+            .eq('status', 'accepted')
+            .limit(1);
+            
+          if (data && data.length > 0) {
+            sessionRole = "FAMILIA";
+          }
+        }
+
+        // Update stale session
         session.role = sessionRole;
         localStorage.setItem("user_session", JSON.stringify(session));
-      }
 
-      setRole(sessionRole);
-      setOriginalRole(sessionRole);
-    } catch (e) {
-      router.push("/login");
-    } finally {
-      setIsLoading(false);
-    }
+        setRole(sessionRole);
+        setOriginalRole(sessionRole);
+      } catch (e) {
+        setRole("USER");
+        setOriginalRole("USER");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkRole();
   }, [router]);
 
   if (isLoading) {
