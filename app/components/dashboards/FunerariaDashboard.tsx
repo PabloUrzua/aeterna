@@ -144,6 +144,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   // Plantilla de Email (Magic Link)
   const [emailSubject, setEmailSubject] = useState("Acceso a tu Memorial Digital - Amuley Legacy");
   const [emailGreeting, setEmailGreeting] = useState("Estimada familia Valenzuela,");
+  const [customAlert, setCustomAlert] = useState<{show: boolean, msg: string, isError: boolean}>({show: false, msg: "", isError: false});
   const [emailBody, setEmailBody] = useState("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
 
@@ -357,9 +358,9 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
         spread: 30,
         colors: [config.primaryColor, "#FAF7F2"]
       });
-      alert(`Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`);
+      setCustomAlert({show: true, msg: `Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`, isError: false});
     } catch (err: any) {
-      alert(`Error inesperado: ${err.message}`);
+      setCustomAlert({show: true, msg: `Error inesperado: ${err.message}`, isError: true});
       setIsCreating(false);
     }
   };
@@ -1522,6 +1523,31 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
           </div>
         </main>
       </div>
+
+      {customAlert.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#FCFBFA] p-8 rounded-2xl shadow-2xl max-w-md w-full border border-[#967B62]/30 text-center animate-in zoom-in-95 duration-300">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${customAlert.isError ? 'bg-red-500/10' : 'bg-[#14B8A6]/10'}`}>
+              {customAlert.isError ? (
+                <ShieldAlert size={32} className="text-red-500" />
+              ) : (
+                <CheckCircle size={32} className="text-[#14B8A6]" />
+              )}
+            </div>
+            <h3 className="text-xl font-serif font-bold text-[#111111] mb-2">
+              {customAlert.isError ? "Error" : "¡Operación Exitosa!"}
+            </h3>
+            <p className="text-[#55504C] mb-8">{customAlert.msg}</p>
+            <button 
+              onClick={() => setCustomAlert({show: false, msg: "", isError: false})}
+              className="w-full py-3 bg-[#967B62] text-white rounded-xl font-bold tracking-widest uppercase hover:bg-[#7D654E] transition-colors"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

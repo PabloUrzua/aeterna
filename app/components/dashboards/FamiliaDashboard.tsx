@@ -65,6 +65,18 @@ export default function FamiliaDashboard({ switchRole, originalRole }: { switchR
     if (regDate) setMemberSince(regDate);
     
     fetchFamilyAccesses(currentSession);
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('family_accesses_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_accesses' }, () => {
+        fetchFamilyAccesses(currentSession);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchFamilyAccesses = async (currentSession: any) => {

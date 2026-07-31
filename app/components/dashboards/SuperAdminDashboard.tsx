@@ -43,6 +43,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
 
   const [globalMemorials, setGlobalMemorials] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [customAlert, setCustomAlert] = useState<{show: boolean, msg: string}>({show: false, msg: ""});
 
   const [boletas, setBoletas] = useState<any[]>([]);
   const [newBoletaAmount, setNewBoletaAmount] = useState("");
@@ -458,7 +459,7 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
         spread: 30,
         colors: ["#14B8A6", "#FAF7F2"]
       });
-      alert(`Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`);
+      setCustomAlert({show: true, msg: `Memorial creado con éxito. Se envió un correo con un Magic Link de acceso administrativo a: ${newFamilyEmail}`});
     }, 1200);
   };
 
@@ -1587,6 +1588,25 @@ export default function SuperAdminDashboard({ switchRole, originalRole }: { swit
           </div>
         </main>
       </div>
+
+      {customAlert.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#FCFBFA] p-8 rounded-2xl shadow-2xl max-w-md w-full border border-[#967B62]/30 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-[#14B8A6]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={32} className="text-[#14B8A6]" />
+            </div>
+            <h3 className="text-xl font-serif font-bold text-[#111111] mb-2">¡Operación Exitosa!</h3>
+            <p className="text-[#55504C] mb-8">{customAlert.msg}</p>
+            <button 
+              onClick={() => setCustomAlert({show: false, msg: ""})}
+              className="w-full py-3 bg-[#967B62] text-white rounded-xl font-bold tracking-widest uppercase hover:bg-[#7D654E] transition-colors"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
