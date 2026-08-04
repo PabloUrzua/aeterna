@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Resend } from "resend";
+import { rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 10 requests per 10 minutes — prevents email abuse
+  if (!rateLimit(request, { limit: 10, windowMs: 10 * 60_000, route: "/api/solicitar" })) {
+    return tooManyRequests(10 * 60_000);
+  }
+
   try {
     const data = await request.json();
     const { name, type, plan, placa, userEmail, relation, message, species, breed, totalPrice } = data;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
+import { rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 // In-memory mock database for fallback
 const mockMemorials = [
@@ -25,6 +26,11 @@ const mockMemorials = [
 ];
 
 export async function GET(request: NextRequest) {
+  // 60 reads per minute per IP
+  if (!rateLimit(request, { limit: 60, windowMs: 60_000, route: "GET:/api/memorials" })) {
+    return tooManyRequests();
+  }
+
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");
 
@@ -72,6 +78,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // 20 creates per minute per IP
+  if (!rateLimit(request, { limit: 20, windowMs: 60_000, route: "POST:/api/memorials" })) {
+    return tooManyRequests();
+  }
+
   try {
     const body = await request.json();
     const { name, slug, birthDate, deathDate, biography, mainImage, coverImage, isPrivate, password, creatorId } = body;

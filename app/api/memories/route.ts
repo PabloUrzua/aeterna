@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 interface MockMemory {
   id: string;
@@ -76,6 +77,11 @@ const mockCondolences: MockCondolence[] = [
 ];
 
 export async function GET(request: NextRequest) {
+  // 60 reads per minute per IP
+  if (!rateLimit(request, { limit: 60, windowMs: 60_000, route: "GET:/api/memories" })) {
+    return tooManyRequests();
+  }
+
   const { searchParams } = new URL(request.url);
   const memorialId = searchParams.get("memorialId");
   const type = searchParams.get("type"); // "memories" or "condolences"
@@ -112,6 +118,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // 30 writes per minute per IP
+  if (!rateLimit(request, { limit: 30, windowMs: 60_000, route: "POST:/api/memories" })) {
+    return tooManyRequests();
+  }
+
   try {
     const body = await request.json();
     const { isCondolence, memorialId, authorName, message, title, content, type, fileUrl, authorRelation } = body;

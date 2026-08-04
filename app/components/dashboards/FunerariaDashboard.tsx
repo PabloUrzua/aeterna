@@ -20,7 +20,11 @@ import {
   Layers,
   Laptop,
   Menu,
-  X
+  X,
+  LogOut,
+  Receipt,
+  Eye,
+  Download
 } from "lucide-react";
 import { useBranding, presets } from "../../context/BrandingContext";
 import confetti from "canvas-confetti";
@@ -31,17 +35,30 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const { config, updateConfig, applyPreset, resetConfig, activePreset } = useBranding();
   
   const [createdMemorials, setCreatedMemorials] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "memoriales" | "usuarios" | "sucursales">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "memoriales" | "usuarios" | "sucursales" | "facturacion" | "configuracion">("overview");
+
+  const [companyProfile, setCompanyProfile] = useState({
+    rut: "",
+    address: "",
+    phone: "",
+    email: "",
+    city: "",
+    website: "",
+  });
+  const [profileSaveMsg, setProfileSaveMsg] = useState<{type:"success"|"error", text:string} | null>(null);
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserRole, setNewUserRole] = useState("FAMILIA");
+  const [newUserBranch, setNewUserBranch] = useState("");
+  const [newUserMemorial, setNewUserMemorial] = useState("");
   const [userCreateMsg, setUserCreateMsg] = useState<{type: "success"|"error", text: string} | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [tenantProfileName, setTenantProfileName] = useState<string>("Funeraria");
 
   const [branches, setBranches] = useState<any[]>([]);
   const [newBranchName, setNewBranchName] = useState("");
@@ -50,13 +67,47 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const [isCreatingBranch, setIsCreatingBranch] = useState(false);
   const [branchCreateMsg, setBranchCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [newInvoiceAmount, setNewInvoiceAmount] = useState("");
+  const [newInvoiceDescription, setNewInvoiceDescription] = useState("");
+  const [newInvoiceClient, setNewInvoiceClient] = useState("");
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [invoiceCreateMsg, setInvoiceCreateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  React.useEffect(() => {
+    const savedProfile = localStorage.getItem("amuley_company_profile");
+    if (savedProfile) {
+      try { setCompanyProfile(JSON.parse(savedProfile)); } catch {}
+    }
+  }, []);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem("amuley_company_profile", JSON.stringify(companyProfile));
+    setProfileSaveMsg({ type: "success", text: "Datos de la empresa guardados correctamente." });
+    setTimeout(() => setProfileSaveMsg(null), 3000);
+  };
+
   React.useEffect(() => {
     const sessionStr = localStorage.getItem("user_session");
-    let currentEmail = null;
+    let currentEmail: string | null = null;
+    let myTenant = config.name;
     if (sessionStr) {
       const sess = JSON.parse(sessionStr);
       currentEmail = sess.email;
       setSessionEmail(currentEmail);
+      
+      const savedUsersStr = localStorage.getItem("amuley_users");
+      if (savedUsersStr) {
+        const allUsers = JSON.parse(savedUsersStr);
+        const me = allUsers.find((u: any) => u.email === currentEmail);
+        if (me && me.tenantName) {
+          myTenant = me.tenantName;
+          setTenantProfileName(me.tenantName);
+        } else {
+          setTenantProfileName(config.name);
+        }
+      }
     }
 
     const savedMems = localStorage.getItem("amuley_memorials");
@@ -74,7 +125,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       const savedUsersStr = localStorage.getItem("amuley_users");
       if (savedUsersStr) {
         const allUsers = JSON.parse(savedUsersStr);
-        setTenantUsers(allUsers.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
+        setTenantUsers(allUsers.filter((u: any) => u.tenantName === myTenant || u.branchName === "Global"));
       }
     };
 
@@ -82,13 +133,57 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       const savedBranches = localStorage.getItem("amuley_branches");
       if (savedBranches) {
         const allBranches = JSON.parse(savedBranches);
-        setBranches(allBranches.filter((b: any) => b.tenantName === config.name));
+        setBranches(allBranches.filter((b: any) => b.tenantName === myTenant));
+      }
+    };
+
+    const loadInvoices = () => {
+      const savedInvoices = localStorage.getItem("amuley_invoices");
+      if (savedInvoices) {
+        const allInvoices = JSON.parse(savedInvoices);
+        setInvoices(allInvoices.filter((i: any) => i.tenantName === myTenant));
       }
     };
 
     reloadUsers();
     loadBranches();
+    loadInvoices();
 
+    let timerId: NodeJS.Timeout;
+    const loadTenantInfo = () => {
+      const savedTenants = localStorage.getItem("amuley_tenants");
+      let startDate = new Date();
+      if (savedTenants) {
+        const allTenants = JSON.parse(savedTenants);
+        const myTenantData = allTenants.find((t: any) => t.name === myTenant);
+        if (myTenantData && myTenantData.date) {
+          startDate = new Date(myTenantData.date);
+        }
+      }
+      
+      const expirationDate = startDate.getTime() + 90 * 24 * 60 * 60 * 1000;
+      
+      const updateTimer = () => {
+        const now = new Date().getTime();
+        const diff = expirationDate - now;
+        
+        if (diff <= 0) {
+          setDaysLeft(0);
+          setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+        } else {
+          const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const s = Math.floor((diff % (1000 * 60)) / 1000);
+          setDaysLeft(d);
+          setTimeLeft({ d, h, m, s });
+        }
+      };
+      
+      updateTimer();
+      timerId = setInterval(updateTimer, 1000);
+    };
+    loadTenantInfo();
     // Sincronizar estado en "Tiempo Real" si otra pestaña actualiza localStorage
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "amuley_users") reloadUsers();
@@ -124,6 +219,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
 
     // Cleanup listeners
     return () => {
+      clearInterval(timerId);
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("local-storage-update", reloadUsers);
     };
@@ -148,8 +244,17 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
   const [emailBody, setEmailBody] = useState("Le enviamos este enlace mágico privado para que puedan administrar, personalizar y compartir el memorial digital de su ser querido. A través de este portal, podrán subir fotografías, mensajes de voz, biografías y configurar su árbol familiar perpetuo.");
   const [isEditingTemplate, setIsEditingTemplate] = useState(false);
 
-  // Período de Reportes
+  // Período de Reportes y Datos en Tiempo Real
   const [reportPeriod, setReportPeriod] = useState<"7d" | "30d" | "12m">("7d");
+  const [liveTraffic, setLiveTraffic] = useState(0);
+
+  React.useEffect(() => {
+    // Simular tráfico orgánico en tiempo real para el Dashboard (solo afecta a la vista de 7 días)
+    const interval = setInterval(() => {
+      setLiveTraffic(prev => prev + (Math.random() > 0.4 ? 1 : 0));
+    }, 4500);
+    return () => clearInterval(interval);
+  }, []);
 
   const getChartData = () => {
     if (reportPeriod === "7d") {
@@ -162,18 +267,19 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
     if (reportPeriod === "30d") {
       return {
         points: "50,140 150,120 250,130 350,80 450,90 550,50 650,40",
-        labels: ["Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6"],
-        visits: [75, 95, 80, 142, 120, 165]
+        labels: ["D1", "D5", "D10", "D15", "D20", "D25", "D30"],
+        visits: [75, 95, 80, 142, 120, 165, 140]
       };
     }
     return {
       points: "50,150 150,135 250,110 350,90 450,60 550,45 650,30",
-      labels: ["Ene", "Mar", "May", "Jul", "Sep", "Nov"],
-      visits: [340, 410, 580, 620, 840, 1120]
+      labels: ["Ene", "Mar", "May", "Jul", "Sep", "Nov", "Dic"],
+      visits: [340, 410, 580, 620, 840, 1120, 1300]
     };
   };
 
   const chart = getChartData();
+  const totalVisits = chart.visits.reduce((acc, curr) => acc + curr, 0) + (reportPeriod === "7d" ? liveTraffic : 0);
 
   // Guardar cambio de marca
   const [showSaveMessage, setShowSaveMessage] = useState(false);
@@ -192,16 +298,18 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return;
+    if (!newUserEmail.trim()) return;
 
     setIsCreatingUser(true);
     setUserCreateMsg(null);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: newUserEmail,
-        password: newUserPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
       });
 
       if (error) {
@@ -209,11 +317,12 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
       } else {
         const newUser = {
           id: `u-${Date.now()}`,
-          name: newUserName,
+          name: "Invitado",
           email: newUserEmail,
-          role: newUserRole,
+          role: "FAMILIA",
           tenantName: config.name,
-          branchName: "Global",
+          branchName: newUserBranch || "Global",
+          memorialId: newUserMemorial || null,
           createdAt: new Date().toISOString().substring(0, 10),
           status: "Pendiente Confirmación"
         };
@@ -225,16 +334,186 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
         
         setTenantUsers(updated.filter((u: any) => u.tenantName === config.name || u.branchName === "Global"));
 
-        setUserCreateMsg({ type: "success", text: `Usuario ${newUserEmail} creado exitosamente.` });
-        setNewUserName("");
+        setUserCreateMsg({ type: "success", text: `Invitación enviada a ${newUserEmail}.` });
         setNewUserEmail("");
-        setNewUserPassword("");
-        confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+        setNewUserBranch("");
+        setNewUserMemorial("");
+        
+        setTimeout(() => {
+          setUserCreateMsg(null);
+          setShowInviteModal(false);
+        }, 2000);
       }
     } catch (err: any) {
       setUserCreateMsg({ type: "error", text: err.message || "Error inesperado" });
     } finally {
       setIsCreatingUser(false);
+    }
+  };
+
+  const handleGeneratePDF = (inv: any, action: "view" | "download") => {
+    try {
+      import("jspdf").then(({ default: jsPDF }) => {
+        const doc = new jsPDF();
+        
+        // Helper to convert hex to rgb
+        const hexToRgb = (hex: string) => {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "#111111");
+          return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          } : { r: 17, g: 17, b: 17 };
+        };
+        
+        const primaryRgb = hexToRgb(config.primaryColor || "#967B62");
+        
+        // ====== MODERN INVOICE DESIGN ======
+        const W = 210;
+        
+        // TOP ACCENT BAR (full width, 6px tall)
+        doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.rect(0, 0, W, 6, 'F');
+
+        // HEADER: Left = company info, Right = invoice badge
+        // Company name
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(20);
+        doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.text(tenantProfileName.toUpperCase(), 20, 22);
+
+        // Company details
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(120, 120, 120);
+        const addr = companyProfile.address || "Dirección no configurada";
+        const ph = companyProfile.phone || "Teléfono no configurado";
+        const em = companyProfile.email || ("contacto@" + tenantProfileName.toLowerCase().replace(/\s+/g, '') + ".com");
+        const ct = companyProfile.city || "";
+        doc.text(`${addr}${ct ? ", " + ct : ""}`, 20, 28);
+        doc.text(`Tel: ${ph}  |  ${em}`, 20, 34);
+        if (companyProfile.website) doc.text(`Web: ${companyProfile.website}`, 20, 40);
+
+        // Right: FACTURA ELECTRÓNICA badge box
+        const bx = 130, by = 12, bw = 65, bh = 30;
+        // Shadow-like rectangle
+        doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.roundedRect(bx, by, bw, bh, 3, 3, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("FACTURA ELECTRÓNICA", bx + bw/2, by + 9, { align: "center" });
+        if (companyProfile.rut) {
+          doc.setFontSize(8);
+          doc.text(`R.U.T.: ${companyProfile.rut}`, bx + bw/2, by + 16, { align: "center" });
+        }
+        doc.setFontSize(11);
+        doc.text(`N° ${inv.id.substring(0, 8).toUpperCase()}`, bx + bw/2, by + 25, { align: "center" });
+
+        // DIVIDER LINE
+        const divY = 48;
+        doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.setLineWidth(0.5);
+        doc.line(20, divY, W - 20, divY);
+
+        // CLIENT INFO SECTION (two column grid)
+        const ciY = 58;
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.text("CLIENTE", 20, ciY);
+        doc.text("DETALLES", 110, ciY);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(30, 30, 30);
+        doc.text(inv.client, 20, ciY + 7);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Fecha emisión: ${inv.date}`, 110, ciY + 7);
+        doc.text(`Estado: ${inv.status}`, 110, ciY + 13);
+        doc.text("Condición: Contado / Transferencia", 110, ciY + 19);
+
+        // TABLE
+        const tY = 90;
+        // Header background
+        doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.roundedRect(20, tY, W - 40, 11, 1, 1, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.text("CÓD.", 24, tY + 7.5);
+        doc.text("DESCRIPCIÓN DEL SERVICIO", 45, tY + 7.5);
+        doc.text("CANT.", 148, tY + 7.5, { align: "center" });
+        doc.text("TOTAL", W - 22, tY + 7.5, { align: "right" });
+
+        // Alternating row background
+        doc.setFillColor(247, 247, 250);
+        doc.rect(20, tY + 11, W - 40, 14, 'F');
+
+        // Row content
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.text("SRV-01", 24, tY + 20);
+
+        const splitDesc = doc.splitTextToSize(inv.description, 95);
+        doc.text(splitDesc, 45, tY + 20);
+
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 30, 30);
+        doc.text("1", 148, tY + 20, { align: "center" });
+        doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.text(inv.amount, W - 22, tY + 20, { align: "right" });
+
+        // Bottom line of table
+        const tableEndY = tY + 11 + 14 + (Math.max(splitDesc.length - 1, 0) * 5);
+        doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.setLineWidth(0.4);
+        doc.line(20, tableEndY, W - 20, tableEndY);
+
+        // TOTALS SECTION
+        const toY = tableEndY + 14;
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text("Subtotal:", W - 65, toY, { align: "right" });
+        doc.text("IVA (19%):", W - 65, toY + 7, { align: "right" });
+        doc.setTextColor(100, 100, 100);
+        doc.text("Exento", W - 22, toY, { align: "right" });
+        doc.text("Exento", W - 22, toY + 7, { align: "right" });
+
+        // Total box
+        doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.roundedRect(W - 80, toY + 12, 60, 14, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.text("TOTAL:", W - 72, toY + 21);
+        doc.setFontSize(11);
+        doc.text(inv.amount, W - 22, toY + 21, { align: "right" });
+
+        // FOOTER STRIP
+        doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        doc.rect(0, 285, W, 12, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7.5);
+        doc.text("Documento generado electrónicamente — Aeterna / Amuley Legacy", W / 2, 292, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.text(`Generado el ${new Date().toLocaleDateString()}`, W / 2, 296, { align: "center" });
+        
+        if (action === "download") {
+          doc.save(`Factura_${inv.id.substring(0,8)}.pdf`);
+        } else {
+          window.open(doc.output("bloburl"), "_blank");
+        }
+      });
+    } catch (error) {
+      console.error("Error al generar PDF", error);
+      setCustomAlert({ show: true, msg: "Error al generar el PDF.", isError: true });
     }
   };
 
@@ -266,6 +545,37 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
     setNewBranchCity("");
     setNewBranchAddress("");
     setIsCreatingBranch(false);
+    confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
+  };
+
+  const handleCreateInvoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newInvoiceClient.trim() || !newInvoiceAmount.trim()) return;
+
+    setIsCreatingInvoice(true);
+    setInvoiceCreateMsg(null);
+
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
+      client: newInvoiceClient,
+      description: newInvoiceDescription || "Servicios Funerarios",
+      amount: newInvoiceAmount,
+      date: new Date().toISOString().substring(0, 10),
+      status: "Emitida",
+      tenantName: config.name
+    };
+
+    const savedInvoices = localStorage.getItem("amuley_invoices");
+    const allInvoices = savedInvoices ? JSON.parse(savedInvoices) : [];
+    const updated = [...allInvoices, newInvoice];
+    localStorage.setItem("amuley_invoices", JSON.stringify(updated));
+    setInvoices(updated.filter(i => i.tenantName === config.name));
+
+    setInvoiceCreateMsg({ type: "success", text: "Factura generada exitosamente." });
+    setNewInvoiceClient("");
+    setNewInvoiceDescription("");
+    setNewInvoiceAmount("");
+    setIsCreatingInvoice(false);
     confetti({ particleCount: 20, spread: 25, colors: ["#14B8A6", "#FAF7F2"] });
   };
 
@@ -388,7 +698,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
             >
               <path d="M12 2V22M6 8H18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="truncate">{config.name.toUpperCase()}</span>
+            <span className="truncate">{tenantProfileName.toUpperCase()}</span>
           </span>
           <button 
             className="md:hidden text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
@@ -468,6 +778,32 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
             >
               <Users size={14} /> Gestión de Usuarios
             </button>
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className="w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+            >
+              <UserPlus size={14} /> Invitar Usuarios
+            </button>
+            <button 
+              onClick={() => setActiveTab("facturacion")}
+              className={`w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "facturacion" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Receipt size={14} /> Facturación
+            </button>
+            <button 
+              onClick={() => setActiveTab("configuracion")}
+              className={`w-full text-left px-3 py-2 rounded-lg font-semibold flex items-center gap-2 smooth-transition ${
+                activeTab === "configuracion" 
+                  ? "bg-[var(--tenant-primary)]/10 text-[var(--tenant-primary)]" 
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              <Settings size={14} /> Configuración
+            </button>
             <Link 
               href="/memorial/alejandro-valenzuela"
               className="w-full text-left px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 flex items-center justify-between text-neutral-600 dark:text-neutral-400 mt-2"
@@ -475,6 +811,18 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
               <span className="flex items-center gap-2"><Laptop size={14} /> Ver Memorial Demo</span>
               <ExternalLink size={10} />
             </Link>
+
+            <button 
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                localStorage.removeItem("user_session");
+                router.push("/login");
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2 text-red-600 dark:text-red-400 smooth-transition mt-8 border-t border-neutral-100 dark:border-neutral-800 pt-4"
+            >
+              <LogOut size={14} /> Salir del perfil
+            </button>
           </div>
 
           {/* Estadísticas Rápidas */}
@@ -490,40 +838,67 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
               </div>
               <div className="flex justify-between border-t border-neutral-200 dark:border-neutral-800 pt-3">
                 <div>
-                  <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest block">Visitas Totales</span>
-                  <span className="font-semibold text-sm">482</span>
+                  <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest block mb-1">Usuarios</span>
+                  <span className="text-lg font-bold font-serif">{tenantUsers.length}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest block">Costo de Software</span>
-                  <span className="font-semibold text-sm text-[var(--tenant-primary)]">$399/mes</span>
+                  <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest block mb-1">Sucursales</span>
+                  <span className="text-lg font-bold font-serif">{branches.length}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Detalles de Suscripción SaaS */}
+          {/* Detalles de Suscripción SaaS y Contador */}
           <div className="glass-panel p-4 md:p-6 rounded-xl space-y-4">
             <h4 className="font-serif text-sm font-semibold mb-1">Suscripción B2B</h4>
-            <div className="space-y-2.5 text-xs md:text-sm">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+            
+            {/* Suscripción (Contador en vivo) */}
+            {timeLeft !== null && (
+              <div className={`p-4 rounded-xl border ${timeLeft.d <= 0 ? 'border-red-500/50 bg-red-50 dark:bg-red-950/20' : 'border-[var(--tenant-primary)]/20 bg-gradient-to-br from-[var(--tenant-primary)]/5 to-transparent'}`}>
+                <div className="flex justify-between items-center mb-3">
+                  <span className={`text-[10px] md:text-xs uppercase tracking-widest block font-bold ${timeLeft.d <= 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--tenant-primary)]'}`}>
+                    Expira en
+                  </span>
+                  <div className="flex gap-1">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--tenant-primary)] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--tenant-primary)]"></span>
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="bg-white dark:bg-neutral-900 rounded-lg py-2 shadow-sm border border-neutral-100 dark:border-neutral-800">
+                    <span className="block text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">{timeLeft.d}</span>
+                    <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-bold mt-1">Días</span>
+                  </div>
+                  <div className="bg-white dark:bg-neutral-900 rounded-lg py-2 shadow-sm border border-neutral-100 dark:border-neutral-800">
+                    <span className="block text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">{String(timeLeft.h).padStart(2, '0')}</span>
+                    <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-bold mt-1">Hrs</span>
+                  </div>
+                  <div className="bg-white dark:bg-neutral-900 rounded-lg py-2 shadow-sm border border-neutral-100 dark:border-neutral-800">
+                    <span className="block text-xl font-bold font-serif text-neutral-800 dark:text-neutral-100">{String(timeLeft.m).padStart(2, '0')}</span>
+                    <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-bold mt-1">Min</span>
+                  </div>
+                  <div className="bg-white dark:bg-neutral-900 rounded-lg py-2 shadow-sm border border-neutral-100 dark:border-neutral-800">
+                    <span className="block text-xl font-bold font-serif text-[var(--tenant-primary)]">{String(timeLeft.s).padStart(2, '0')}</span>
+                    <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-bold mt-1">Seg</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2.5 text-xs md:text-sm mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="flex justify-between items-center">
                 <span className="text-neutral-400">Plan Actual:</span>
                 <span className="font-bold text-[var(--tenant-primary)]">Growth B2B</span>
               </div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+              <div className="flex justify-between items-center">
                 <span className="text-neutral-400">Estado:</span>
-                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 text-[8px] font-bold">Activo</span>
-              </div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-                <span className="text-neutral-400">Próximo Pago:</span>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">15 de Ago, 2026</span>
-              </div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-                <span className="text-neutral-400">Medio de Pago:</span>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">Visa ending *4242</span>
-              </div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 border-t border-neutral-200 dark:border-neutral-800 pt-2">
-                <span className="text-neutral-400">Límite Sucursales:</span>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">{branches.length} / 5</span>
+                <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold ${daysLeft !== null && daysLeft <= 0 ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'}`}>
+                  {daysLeft !== null && daysLeft <= 0 ? 'Expirado' : 'Activo'}
+                </span>
               </div>
             </div>
           </div>
@@ -561,173 +936,30 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
           </div>
         </header>
 
-        {/* Contenido Principal Scrolleable */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--background)]">
+        {/* Contenido Principal */}
+        {daysLeft !== null && daysLeft <= 0 ? (
+          <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--background)] flex flex-col items-center justify-center text-center">
+            <div className="max-w-md w-full glass-panel p-8 rounded-2xl border border-red-200 dark:border-red-900/50 flex flex-col items-center shadow-xl">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-6">
+                <ShieldAlert size={32} />
+              </div>
+              <h2 className="text-2xl font-serif font-bold text-neutral-800 dark:text-neutral-100 mb-4">Suscripción Expirada</h2>
+              <p className="text-neutral-500 dark:text-neutral-400 mb-8 leading-relaxed">
+                Tu ciclo de 3 meses ha finalizado. Vuelve a pagar el servicio para reactivar tu perfil y acceder a la administración.
+                <br/><br/>
+                <strong>No te preocupes:</strong> Ningún dato de tus usuarios, sucursales o memoriales ha sido borrado. Todo está a salvo y volverá a estar disponible una vez renueves la suscripción.
+              </p>
+              <button className="px-6 py-3 bg-[var(--tenant-primary)] text-white rounded-xl font-bold smooth-transition shadow-lg w-full hover:opacity-90 active:scale-95">
+                Renovar Suscripción (Demo)
+              </button>
+            </div>
+          </main>
+        ) : (
+          <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[var(--background)]">
           <div className="max-w-7xl mx-auto space-y-8 pb-12">
             
           {activeTab === "overview" && (
             <div className="space-y-8">
-              {/* Módulo de Personalización White Label */}
-              <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
-                <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
-                  <Palette size={18} className="text-[var(--tenant-primary)]" />
-                  Personalización de Marca Blanca (White Label)
-                </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
-                  Edita el aspecto visual de tus memoriales públicos. Configura tu logotipo comercial, colores y dominio para mantener la consistencia de tu marca.
-                </p>
-
-                {/* Presets rápidos */}
-                <div className="mb-6">
-                  <span className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold block mb-3">Ajustes Rápidos de Marca</span>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {Object.keys(presets).map((key) => {
-                      const preset = presets[key as keyof typeof presets];
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => applyPreset(key as "amuley" | "lapaz" | "elysium" | "aurora")}
-                          className={`p-3.5 rounded-xl border text-left flex flex-col justify-between h-28 transition-all ${
-                            activePreset === key 
-                              ? "border-[var(--tenant-primary)] bg-[var(--tenant-primary)]/5" 
-                              : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                          }`}
-                        >
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 w-full">
-                            <span className="font-serif font-bold text-sm md:text-base text-neutral-800 dark:text-neutral-200">{preset.name.split(" ")[1] || preset.name}</span>
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.primaryColor }}></span>
-                          </div>
-                          <p className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400 font-light leading-relaxed">
-                            {preset.colorMeaning.split(":")[0]}
-                          </p>
-                          <span className="text-[8px] text-neutral-400 font-mono block mt-auto pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80">
-                            {preset.domain}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Personalización Manual */}
-                <div className="grid md:grid-cols-2 gap-4 md:p-6 border-t border-neutral-200 dark:border-neutral-800 pt-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Comercial de la Funeraria</label>
-                      <input 
-                        type="text" 
-                        value={config.name}
-                        onChange={(e) => updateConfig({ name: e.target.value })}
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Dominio Personalizado (White Label)</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={config.domain}
-                          onChange={(e) => {
-                            updateConfig({ domain: e.target.value });
-                            setDnsStatus("pending");
-                          }}
-                          className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 font-mono outline-none text-sm md:text-base"
-                          placeholder="ej. recuerdos.tufuneraria.com"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDnsStatus("checking");
-                            setTimeout(() => {
-                              setDnsStatus("verified");
-                              confetti({
-                                particleCount: 15,
-                                spread: 30,
-                                colors: [config.primaryColor, "#FAF7F2"]
-                              });
-                            }, 1200);
-                          }}
-                          disabled={dnsStatus === "checking"}
-                          className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-xs md:text-sm uppercase tracking-widest font-semibold rounded-lg text-neutral-600 dark:text-neutral-300 transition-colors"
-                        >
-                          {dnsStatus === "checking" ? "Validando..." : "Validar DNS"}
-                        </button>
-                      </div>
-
-                      {/* Detalle DNS */}
-                      <div className="mt-2.5 p-3 rounded-lg border border-neutral-200/60 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30 text-xs md:text-sm space-y-2">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 text-xs md:text-sm uppercase tracking-wider font-bold">
-                          <span className="text-neutral-400">Instrucciones DNS</span>
-                          {dnsStatus === "verified" ? (
-                            <span className="text-green-500 font-bold flex items-center gap-1">● Conectado (SSL Activo)</span>
-                          ) : dnsStatus === "checking" ? (
-                            <span className="text-yellow-500 font-bold flex items-center gap-1">● Validando registros...</span>
-                          ) : (
-                            <span className="text-red-500 font-bold flex items-center gap-1">● CNAME no detectado</span>
-                          )}
-                        </div>
-                        <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed">
-                          Crea un registro CNAME en tu proveedor de hosting o DNS (Cloudflare, GoDaddy, etc.) apuntando a:
-                          <code className="block mt-1 font-mono text-xs md:text-sm text-[var(--tenant-primary)] bg-white dark:bg-neutral-900 px-2 py-1 rounded border border-neutral-200 dark:border-neutral-800">cname.amuley.com</code>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Color Principal</label>
-                        <div className="flex gap-2 items-center">
-                          <input 
-                            type="color" 
-                            value={config.primaryColor}
-                            onChange={(e) => updateConfig({ primaryColor: e.target.value, primaryColorHover: e.target.value })}
-                            className="w-10 h-9 rounded-lg cursor-pointer bg-transparent border-0"
-                          />
-                          <span className="font-mono text-sm md:text-base uppercase text-neutral-500">{config.primaryColor}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Tipografía</label>
-                        <select
-                          value={config.fontFamily}
-                          onChange={(e) => updateConfig({ fontFamily: e.target.value as "serif" | "sans" })}
-                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 outline-none text-sm md:text-base"
-                        >
-                          <option value="serif">Playfair Serif (Clásica)</option>
-                          <option value="sans">Geist Sans (Moderna)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <button 
-                        onClick={handleSaveBrandSettings}
-                        className="px-6 py-2.5 rounded-full bg-tenant-btn-main text-white hover:opacity-90 font-semibold transition-colors flex items-center gap-1.5"
-                      >
-                        <CheckCircle size={14} /> Guardar Ajustes de Marca
-                      </button>
-                      {showSaveMessage && (
-                        <span className="text-xs md:text-sm text-green-500 font-bold block mt-2">✔ Los estilos White Label han sido aplicados correctamente.</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Vista Previa de Logo */}
-                  <div className="p-4 md:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/10 flex flex-col justify-center items-center text-center space-y-4">
-                    <span className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 font-bold">Vista Previa de Marca Blanca</span>
-                    
-                    <div className="border border-neutral-200 dark:border-neutral-850 p-5 md:p-8 rounded-xl bg-white dark:bg-neutral-950 w-full max-w-xs shadow-inner">
-                      <div className="w-12 h-12 mx-auto rounded-full flex items-center justify-center border mb-3" style={{ borderColor: config.primaryColor }}>
-                        <span className="w-6 h-6 rounded-full" style={{ backgroundColor: config.primaryColor }}></span>
-                      </div>
-                      <span className="font-serif text-sm font-bold text-neutral-800 dark:text-neutral-100 tracking-wider block">{config.name}</span>
-                      <span className="text-[8px] font-mono text-neutral-400 block mt-1">{config.domain}</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
 
               {/* Reportes y Analíticas de Visitas (SVG charts) */}
               <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left space-y-6">
@@ -735,10 +967,10 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                   <div>
                     <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
                       <TrendingUp size={18} className="text-[var(--tenant-primary)]" />
-                      Reportes y Analíticas de Tráfico
+                      Reportes y Analíticas Generales
                     </h2>
                     <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed text-sm">
-                      Monitorea las visitas virtuales recibidas y escaneos de códigos QR en lápidas físicas en tiempo real.
+                      Monitorea ingresos, registro de usuarios y el estado de las peticiones en tiempo real.
                     </p>
                   </div>
 
@@ -766,35 +998,50 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
 
                 {/* Grid de métricas */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-850 bg-white/40 dark:bg-black/20">
-                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Visitas Totales</span>
-                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">
-                      {reportPeriod === "7d" ? "191" : (reportPeriod === "30d" ? "677" : "3,990")}
+                  <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-850 bg-white/40 dark:bg-black/20 relative overflow-hidden">
+                    {reportPeriod === "7d" && (
+                      <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-[var(--tenant-primary)] to-transparent opacity-50"></div>
+                    )}
+                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-2 mb-1">
+                      Ingresos
+                      {reportPeriod === "7d" && (
+                        <span className="flex h-2 w-2 relative" title="Conectado en tiempo real">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100 transition-all duration-300">
+                      {(totalVisits * 15).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
                     </span>
                     <span className="text-[8px] text-green-500 font-bold block mt-0.5">↑ +14.2%</span>
                   </div>
                   <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-850 bg-white/40 dark:bg-black/20">
-                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Escaneos QR</span>
-                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">
-                      {reportPeriod === "7d" ? "124" : (reportPeriod === "30d" ? "428" : "2,610")}
+                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Usuarios</span>
+                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100 transition-all duration-300">
+                      {tenantUsers.length}
                     </span>
-                    <span className="text-[8px] text-green-500 font-bold block mt-0.5">↑ +8.5%</span>
+                    <span className="text-[8px] text-neutral-400 block mt-0.5">Registrados en total</span>
                   </div>
                   <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-855 bg-white/40 dark:bg-black/20">
-                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Tiempo de Permanencia</span>
-                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">4:12 min</span>
-                    <span className="text-[8px] text-neutral-400 block mt-0.5">Promedio global</span>
+                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Peticiones Pendientes</span>
+                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">
+                      {tenantUsers.filter((u: any) => u.status === "Pendiente Confirmación").length}
+                    </span>
+                    <span className="text-[8px] text-orange-500 font-bold block mt-0.5">Esperando aprobación</span>
                   </div>
                   <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-855 bg-white/40 dark:bg-black/20">
-                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Tasa de Rebote</span>
-                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">14.8%</span>
-                    <span className="text-[8px] text-green-500 font-bold block mt-0.5">Excelente retención</span>
+                    <span className="text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold block mb-1">Peticiones Aceptadas</span>
+                    <span className="text-lg font-serif font-bold text-neutral-800 dark:text-neutral-100">
+                      {tenantUsers.filter((u: any) => u.status === "ACTIVO").length}
+                    </span>
+                    <span className="text-[8px] text-green-500 font-bold block mt-0.5">Usuarios activos</span>
                   </div>
                 </div>
 
                 {/* SVG area chart representation */}
                 <div className="p-5 rounded-xl border border-neutral-200/60 dark:border-neutral-800/80 bg-white dark:bg-neutral-950/20">
-                  <svg viewBox="0 0 700 200" className="w-full h-44 overflow-visible">
+                  <svg viewBox="0 0 700 200" className="w-full h-auto drop-shadow-sm overflow-visible">
                     {/* Horizontal grid lines */}
                     <line x1="50" y1="30" x2="650" y2="30" stroke="rgba(150,150,150,0.15)" strokeWidth="1" strokeDasharray="3 3" />
                     <line x1="50" y1="90" x2="650" y2="90" stroke="rgba(150,150,150,0.15)" strokeWidth="1" strokeDasharray="3 3" />
@@ -851,6 +1098,61 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                       );
                     })}
                   </svg>
+                </div>
+              </section>
+
+              {/* Últimos Memoriales (Registros) */}
+              <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+                <div className="flex justify-between items-start gap-4 mb-6">
+                  <div>
+                    <h2 className="font-serif text-xl font-bold mb-1 flex items-center gap-2">
+                      <FileText size={18} className="text-[var(--tenant-primary)]" />
+                      Últimos Registros (Memoriales)
+                    </h2>
+                    <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed text-sm">
+                      Revisa los memoriales generados recientemente bajo tu perfil de funeraria.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setActiveTab("memoriales")}
+                    className="px-4 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-xs md:text-sm uppercase tracking-widest font-bold text-neutral-600 dark:text-neutral-300 transition-colors"
+                  >
+                    Ver Todos
+                  </button>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm uppercase tracking-widest text-neutral-400">
+                        <th className="pb-3 font-semibold">Nombre</th>
+                        <th className="pb-3 font-semibold">F. Nacimiento</th>
+                        <th className="pb-3 font-semibold">F. Fallecimiento</th>
+                        <th className="pb-3 font-semibold text-right">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 text-sm md:text-base">
+                      {createdMemorials.slice(-5).reverse().map((mem) => (
+                        <tr key={mem.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                          <td className="py-3 font-medium text-neutral-800 dark:text-neutral-200">{mem.name}</td>
+                          <td className="py-3 text-neutral-500">{mem.birthDate}</td>
+                          <td className="py-3 text-neutral-500">{mem.deathDate}</td>
+                          <td className="py-3 text-right">
+                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase tracking-widest">
+                              Activo
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {createdMemorials.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-neutral-500 font-light italic">
+                            Aún no hay memoriales registrados.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </section>
 
@@ -1295,7 +1597,7 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                   Agregar Nuevo Usuario
                 </h2>
                 <p className="text-neutral-500 dark:text-neutral-400 font-light leading-relaxed mb-6">
-                  Crea perfiles administrativos o de colaboradores para tu sucursal.
+                  Invita colaboradores enviando un enlace mágico a su correo electrónico.
                 </p>
 
                 <form onSubmit={handleCreateUser} className="grid md:grid-cols-2 gap-4">
@@ -1309,63 +1611,55 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     </div>
                   )}
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 md:col-span-2">
                     <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Nombre Completo</label>
-                      <input 
-                        type="text"
-                        placeholder="Ej. Juan Pérez"
-                        value={newUserName}
-                        onChange={(e) => setNewUserName(e.target.value)}
-                        required
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo Electrónico</label>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo Electrónico a Invitar</label>
                       <input 
                         type="email"
-                        placeholder="ejemplo@correo.com"
+                        placeholder="familiar@ejemplo.com"
                         value={newUserEmail}
                         onChange={(e) => setNewUserEmail(e.target.value)}
                         required
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
                       />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Vincular Sucursal</label>
+                        <select 
+                          value={newUserBranch}
+                          onChange={(e) => setNewUserBranch(e.target.value)}
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
+                        >
+                          <option value="">Ninguna / Global</option>
+                          {branches.map(b => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Vincular Memorial</label>
+                        <select 
+                          value={newUserMemorial}
+                          onChange={(e) => setNewUserMemorial(e.target.value)}
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
+                        >
+                          <option value="">Ninguno</option>
+                          {createdMemorials.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4 flex flex-col justify-between">
-                    <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Contraseña Provisoria</label>
-                      <input 
-                        type="password"
-                        placeholder="••••••••"
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Rol de Acceso</label>
-                      <select 
-                        value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value)}
-                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2 outline-none text-sm md:text-base mb-2"
-                      >
-                        <option value="FAMILIA">Usuario de Familia (Edición de Memorial)</option>
-                        <option value="FUNERARIA">Operador Funeraria (Limitado)</option>
-                      </select>
-                    </div>
-
+                  <div className="md:col-span-2 pt-2">
                     <button 
                       type="submit"
                       disabled={isCreatingUser}
-                      className="w-full py-3.5 rounded-full bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+                      className="w-full md:w-auto py-3 px-8 rounded-xl bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-lg"
                     >
-                      {isCreatingUser ? "Registrando..." : "Crear Usuario"}
+                      {isCreatingUser ? "Enviando Invitación..." : "Enviar Invitación"}
                     </button>
                   </div>
                 </form>
@@ -1382,7 +1676,8 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                     <thead>
                       <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
                         <th className="pb-3 font-semibold">Nombre y Correo</th>
-                        <th className="pb-3 font-semibold">Rol</th>
+                        <th className="pb-3 font-semibold">Sucursal</th>
+                        <th className="pb-3 font-semibold">Memorial</th>
                         <th className="pb-3 font-semibold">Registro</th>
                         <th className="pb-3 font-semibold">Estado</th>
                       </tr>
@@ -1395,12 +1690,16 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                             <div className="text-xs text-neutral-500 font-mono">{u.email}</div>
                           </td>
                           <td className="py-3.5">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
-                              u.role === "FUNERARIA" 
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
-                            }`}>
-                              {u.role}
+                            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                              {u.branchName || "Global"}
+                            </span>
+                          </td>
+                          <td className="py-3.5">
+                            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                              {u.memorialId 
+                                ? (createdMemorials.find(m => m.id === u.memorialId)?.name || "Vinculado")
+                                : "Ninguno"
+                              }
                             </span>
                           </td>
                           <td className="py-3.5 font-mono text-neutral-500">{u.createdAt}</td>
@@ -1515,14 +1814,319 @@ export default function FunerariaDashboard({ switchRole, originalRole }: { switc
                       )}
                     </tbody>
                   </table>
+              </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === "configuracion" && (
+            <div className="space-y-6 md:space-y-8 animate-fade-in">
+              <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+                <div className="border-b border-neutral-200 dark:border-neutral-800 pb-4 mb-8">
+                  <h2 className="font-serif text-2xl font-bold flex items-center gap-2 text-[var(--tenant-primary)]">
+                    <Settings size={24} /> Configuración de la Empresa
+                  </h2>
+                  <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm">
+                    Estos datos aparecerán en las facturas y documentos generados por el sistema.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveProfile} className="space-y-6 max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">R.U.T. de la Empresa</label>
+                      <input
+                        type="text"
+                        placeholder="76.543.210-K"
+                        value={companyProfile.rut}
+                        onChange={e => setCompanyProfile(p => ({ ...p, rut: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">Teléfono de Contacto</label>
+                      <input
+                        type="tel"
+                        placeholder="+56 9 1234 5678"
+                        value={companyProfile.phone}
+                        onChange={e => setCompanyProfile(p => ({ ...p, phone: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">Correo Electrónico</label>
+                      <input
+                        type="email"
+                        placeholder="contacto@mifuneraria.com"
+                        value={companyProfile.email}
+                        onChange={e => setCompanyProfile(p => ({ ...p, email: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">Ciudad</label>
+                      <input
+                        type="text"
+                        placeholder="Santiago"
+                        value={companyProfile.city}
+                        onChange={e => setCompanyProfile(p => ({ ...p, city: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">Dirección</label>
+                      <input
+                        type="text"
+                        placeholder="Av. Las Rosas 1234"
+                        value={companyProfile.address}
+                        onChange={e => setCompanyProfile(p => ({ ...p, address: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs uppercase tracking-widest text-neutral-400 font-bold block mb-2">Sitio Web (opcional)</label>
+                      <input
+                        type="url"
+                        placeholder="https://www.mifuneraria.com"
+                        value={companyProfile.website}
+                        onChange={e => setCompanyProfile(p => ({ ...p, website: e.target.value }))}
+                        className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {profileSaveMsg && (
+                    <div className={`p-3 rounded-xl text-sm flex items-center gap-2 ${profileSaveMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                      <CheckCircle size={16} />
+                      {profileSaveMsg.text}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-4 pt-2">
+                    <button
+                      type="submit"
+                      className="px-8 py-3 rounded-xl bg-[var(--tenant-primary)] text-white font-bold uppercase tracking-widest text-sm hover:opacity-90 transition-opacity shadow-lg"
+                    >
+                      Guardar Datos
+                    </button>
+                    <p className="text-xs text-neutral-400">Los cambios se aplican inmediatamente a las facturas generadas.</p>
+                  </div>
+                </form>
+              </section>
+            </div>
+          )}
+
+          {activeTab === "facturacion" && (
+            <div className="space-y-6 md:space-y-8 animate-fade-in">
+              <section className="glass-panel p-5 md:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-left">
+                <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-800 pb-4 mb-6">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold flex items-center gap-2 text-[var(--tenant-primary)]">
+                      <Receipt size={24} /> Facturación de la Funeraria
+                    </h2>
+                    <p className="text-neutral-500 dark:text-neutral-400 mt-1">
+                      Gestiona las facturas, recibos y pagos emitidos por tu funeraria.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-neutral-50 dark:bg-neutral-900/50 p-6 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 mb-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-500 mb-4">Emitir Nueva Factura</h3>
+                  <form onSubmit={handleCreateInvoice} className="grid md:grid-cols-4 gap-4 items-end">
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Cliente</label>
+                      <input 
+                        type="text" 
+                        placeholder="Nombre o RUT del Cliente"
+                        value={newInvoiceClient}
+                        onChange={(e) => setNewInvoiceClient(e.target.value)}
+                        required
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Concepto</label>
+                      <input 
+                        type="text" 
+                        placeholder="Servicios Funerarios"
+                        value={newInvoiceDescription}
+                        onChange={(e) => setNewInvoiceDescription(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Monto Total</label>
+                      <input 
+                        type="text" 
+                        placeholder="$450.000"
+                        value={newInvoiceAmount}
+                        onChange={(e) => setNewInvoiceAmount(e.target.value)}
+                        required
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3.5 py-2.5 outline-none text-sm md:text-base"
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={isCreatingInvoice}
+                      className="w-full py-2.5 px-6 rounded-lg bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-sm text-sm"
+                    >
+                      {isCreatingInvoice ? "Generando..." : "Generar Factura"}
+                    </button>
+                  </form>
+                  {invoiceCreateMsg && (
+                    <div className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${invoiceCreateMsg.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                      {invoiceCreateMsg.type === "success" ? <CheckCircle size={16} /> : <ShieldAlert size={16} />}
+                      {invoiceCreateMsg.text}
+                    </div>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto mt-6">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-200 dark:border-neutral-800 text-xs md:text-sm text-neutral-400 uppercase tracking-widest font-bold">
+                        <th className="pb-3 font-semibold">ID</th>
+                        <th className="pb-3 font-semibold">Cliente</th>
+                        <th className="pb-3 font-semibold">Concepto</th>
+                        <th className="pb-3 font-semibold">Fecha</th>
+                        <th className="pb-3 font-semibold">Monto</th>
+                        <th className="pb-3 font-semibold text-center">Estado</th>
+                        <th className="pb-3 font-semibold text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800/80">
+                      {invoices.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50 transition-colors">
+                          <td className="py-3.5 text-neutral-400 font-mono text-xs">{inv.id.substring(0, 8)}</td>
+                          <td className="py-3.5 font-bold text-neutral-800 dark:text-neutral-100">{inv.client}</td>
+                          <td className="py-3.5 text-neutral-500">{inv.description}</td>
+                          <td className="py-3.5 text-neutral-500 text-sm">{inv.date}</td>
+                          <td className="py-3.5 font-mono text-neutral-700 dark:text-neutral-300">{inv.amount}</td>
+                          <td className="py-3.5 text-center">
+                            <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider">
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => handleGeneratePDF(inv, "view")}
+                                className="p-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors tooltip-trigger"
+                                title="Ver Boleta/Factura"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleGeneratePDF(inv, "download")}
+                                className="p-1.5 rounded-lg bg-[var(--tenant-primary)]/10 hover:bg-[var(--tenant-primary)]/20 text-[var(--tenant-primary)] transition-colors tooltip-trigger"
+                                title="Descargar PDF"
+                              >
+                                <Download size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {invoices.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center">
+                            <Receipt className="mx-auto text-neutral-300 dark:text-neutral-600 mb-4" size={48} />
+                            <h3 className="text-xl font-serif font-bold text-neutral-700 dark:text-neutral-300">No hay facturas recientes</h3>
+                            <p className="text-neutral-400 mt-2">No se han generado facturas para tus clientes aún.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             </div>
           )}
 
-          </div>
-        </main>
+        </div>
+      </main>
+        )}
       </div>
+
+      {showInviteModal && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#FCFBFA] dark:bg-neutral-900 p-8 rounded-2xl shadow-2xl max-w-lg w-full border border-[#967B62]/30 dark:border-neutral-800 relative animate-in zoom-in-95 duration-300">
+            <button 
+              onClick={() => setShowInviteModal(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+            >
+              <X size={20} />
+            </button>
+            
+            <h3 className="font-serif text-2xl font-bold mb-2 flex items-center gap-2 text-[var(--tenant-primary)]">
+              <UserPlus size={20} /> Invitar Nuevo Usuario
+            </h3>
+            <p className="text-neutral-500 dark:text-neutral-400 font-light mb-6">
+              Crea una cuenta para un administrador o miembro de tu equipo.
+            </p>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Correo Electrónico</label>
+                <input 
+                  type="email"
+                  placeholder="familiar@ejemplo.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  required
+                  className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Vincular Sucursal</label>
+                  <select 
+                    value={newUserBranch}
+                    onChange={(e) => setNewUserBranch(e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
+                  >
+                    <option value="">Ninguna / Global</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm uppercase tracking-widest text-neutral-400 block mb-1">Vincular Memorial</label>
+                  <select 
+                    value={newUserMemorial}
+                    onChange={(e) => setNewUserMemorial(e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-4 py-3 outline-none focus:border-[var(--tenant-primary)] transition-colors"
+                  >
+                    <option value="">Ninguno</option>
+                    {createdMemorials.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {userCreateMsg && (
+                <div className={`p-3 rounded-lg text-sm mt-4 font-medium ${
+                  userCreateMsg.type === "success" 
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}>
+                  {userCreateMsg.text}
+                </div>
+              )}
+
+              <button 
+                type="submit"
+                disabled={isCreatingUser}
+                className="w-full mt-6 py-3.5 rounded-xl bg-[var(--tenant-primary)] text-white hover:opacity-90 font-bold uppercase tracking-widest transition-colors shadow-lg"
+              >
+                {isCreatingUser ? "Enviando Invitación..." : "Enviar Invitación"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {customAlert.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
